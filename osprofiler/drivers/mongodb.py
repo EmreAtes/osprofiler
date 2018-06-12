@@ -34,7 +34,6 @@ class MongoDB(base.Driver):
 
         client = MongoClient(self.connection_str, connect=False)
         self.db = client[db_name]
-        import pdb; pdb.set_trace()
 
     @classmethod
     def get_name(cls):
