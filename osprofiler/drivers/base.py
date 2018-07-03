@@ -28,8 +28,6 @@ def get_driver(connection_string, *args, **kwargs):
     # NOTE(ayelistratov) Backward compatibility with old Messaging notation
     # Remove after patching all OS services
     # NOTE(ishakhat) Raise exception when ParsedResult.scheme is empty
-    with open('/opt/stack/emre.log/', 'w') as f:
-        f.write('Getting driver for %s\n' % connection_string)
     if "://" not in connection_string:
         connection_string += "://"
 
