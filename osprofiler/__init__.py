@@ -15,4 +15,4 @@
 
 import pkg_resources
 
-__version__ = pkg_resources.get_distribution("osprofiler").version + '_emre'
+__version__ = pkg_resources.get_distribution("osprofiler").version + "_emre"
