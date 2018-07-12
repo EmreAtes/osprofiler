@@ -66,8 +66,8 @@ class Redis(base.Driver):
         data = info.copy()
         data["project"] = self.project
         data["service"] = self.service
-        key = self.namespace + data["base_id"] + "_" + data["trace_id"] + "_" + \
-            data["timestamp"]
+        key = self.namespace + data["base_id"] + "_" + data["trace_id"] + \
+            "_" + data["timestamp"]
         self.db.set(key, jsonutils.dumps(data))
 
     def list_traces(self, query="*", fields=[]):
