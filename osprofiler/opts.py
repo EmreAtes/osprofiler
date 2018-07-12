@@ -15,7 +15,7 @@
 
 from oslo_config import cfg
 
-from osprofiler import web
+import osprofiler.web
 
 __all__ = [
     "list_opts",
@@ -134,6 +134,14 @@ This parameter defines the name (for example:
 sentinal_service_name=mymaster).
 """)
 
+_sampling_rate_opt = cfg.StrOpt(
+    "sampling_rate",
+    default=0.5,
+    help="""
+The sampling rate for osprofiler. A float that is between 1.0 and 0.0.
+1.0 would collect everything.
+""")
+
 
 _PROFILER_OPTS = [
     _enabled_opt,
@@ -144,7 +152,8 @@ _PROFILER_OPTS = [
     _es_scroll_time_opt,
     _es_scroll_size_opt,
     _socket_timeout_opt,
-    _sentinel_service_name_opt
+    _sentinel_service_name_opt,
+    _sampling_rate_opt
 ]
 
 cfg.CONF.register_opts(_PROFILER_OPTS, group=_profiler_opt_group)
@@ -153,7 +162,8 @@ cfg.CONF.register_opts(_PROFILER_OPTS, group=_profiler_opt_group)
 def set_defaults(conf, enabled=None, trace_sqlalchemy=None, hmac_keys=None,
                  connection_string=None, es_doc_type=None,
                  es_scroll_time=None, es_scroll_size=None,
-                 socket_timeout=None, sentinel_service_name=None):
+                 socket_timeout=None, sentinel_service_name=None,
+                 sampling_rate=None):
     conf.register_opts(_PROFILER_OPTS, group=_profiler_opt_group)
 
     if enabled is not None:
@@ -190,11 +200,21 @@ def set_defaults(conf, enabled=None, trace_sqlalchemy=None, hmac_keys=None,
         conf.set_default("sentinel_service_name", sentinel_service_name,
                          group=_profiler_opt_group.name)
 
+    if sampling_rate is not None:
+        conf.set_default("sampling_rate", sampling_rate,
+                         group=_profiler_opt_group.name)
+
 
 def is_trace_enabled(conf=None):
     if conf is None:
         conf = cfg.CONF
     return conf.profiler.enabled
+
+
+def get_sampling_rate(conf=None):
+    if conf is None:
+        conf = cfg.CONF
+    return float(conf.profiler.sampling_rate)
 
 
 def is_db_trace_enabled(conf=None):
@@ -207,14 +227,14 @@ def enable_web_trace(conf=None):
     if conf is None:
         conf = cfg.CONF
     if conf.profiler.enabled:
-        web.enable(conf.profiler.hmac_keys)
+        osprofiler.web.enable(conf.profiler.hmac_keys)
 
 
 def disable_web_trace(conf=None):
     if conf is None:
         conf = cfg.CONF
     if conf.profiler.enabled:
-        web.disable()
+        osprofiler.web.disable()
 
 
 def list_opts():

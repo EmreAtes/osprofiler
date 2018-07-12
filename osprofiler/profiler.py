@@ -17,6 +17,7 @@ import collections
 import datetime
 import functools
 import inspect
+import random
 import socket
 import threading
 
@@ -24,7 +25,15 @@ from oslo_utils import reflection
 from oslo_utils import uuidutils
 
 from osprofiler import notifier
+import osprofiler.opts
 
+# from oslo_log import log as logging
+# LOG = logging.getLogger(__name__)
+# import logging
+# import sys
+# logging.basicConfig(format='%(asctime)s %(levelname)-7s %(message)s',
+#                     stream=sys.stderr, level=logging.CRITICAL)
+# LOG = logging
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
 __local_ctx = threading.local()
@@ -66,7 +75,12 @@ def get():
 
     :returns: Profiler instance or None if profiler wasn't inited.
     """
-    return getattr(__local_ctx, "profiler", None)
+    profiler_instance = getattr(__local_ctx, "profiler", None)
+    if profiler_instance is None:
+        return None
+    if not profiler_instance.get_base_id():
+        return None
+    return profiler_instance
 
 
 def start(name, info=None):
@@ -349,15 +363,30 @@ class Trace(object):
             stop()
 
 
+def _sampling_decision():
+    sampling_rate = osprofiler.opts.get_sampling_rate()
+    if random.random() < sampling_rate:
+        return True
+    else:
+        print("EMRE: this request is not being traced.")
+        return False
+
+
 class _Profiler(object):
 
     def __init__(self, hmac_key, base_id=None, parent_id=None):
         self.hmac_key = hmac_key
         if not base_id:
-            base_id = str(uuidutils.generate_uuid())
+            print("EMRE: Starting to trace something.")
+            if _sampling_decision():
+                base_id = str(uuidutils.generate_uuid())
+            else:
+                base_id = ""
         self._trace_stack = collections.deque([base_id, parent_id or base_id])
         self._name = collections.deque()
         self._host = socket.gethostname()
+        print("EMRE: Sampling rate is %f" %
+              osprofiler.opts.get_sampling_rate())
 
     def get_base_id(self):
         """Return base id of a trace.
@@ -389,6 +418,8 @@ class _Profiler(object):
                      trace element. (sql request, rpc message or url...)
         """
 
+        if not self.get_base_id():
+            return
         info = info or {}
         info["host"] = self._host
         self._name.append(name)
@@ -402,12 +433,16 @@ class _Profiler(object):
 
         :param info: Dict with useful info. It will be send in notification.
         """
+        if not self.get_base_id():
+            return
         info = info or {}
         info["host"] = self._host
         self._notify("%s-stop" % self._name.pop(), info)
         self._trace_stack.pop()
 
     def _notify(self, name, info):
+        if not self.get_base_id():
+            return
         payload = {
             "name": name,
             "base_id": self.get_base_id(),

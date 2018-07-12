@@ -17,7 +17,7 @@ import six
 import webob.dec
 
 from osprofiler import _utils as utils
-from osprofiler import profiler
+import osprofiler.profiler
 
 
 # Trace keys that are required or optional, any other
@@ -34,7 +34,7 @@ X_TRACE_HMAC = "X-Trace-HMAC"
 
 def get_trace_id_headers():
     """Adds the trace id headers (and any hmac) into provided dictionary."""
-    p = profiler.get()
+    p = osprofiler.profiler.get()
     if p and p.hmac_key:
         data = {"base_id": p.get_base_id(), "parent_id": p.get_id()}
         pack = utils.signed_pack(data, p.hmac_key)
@@ -118,7 +118,7 @@ class WsgiMiddleware(object):
         if not self._trace_is_valid(trace_info):
             return request.get_response(self.application)
 
-        profiler.init(**trace_info)
+        osprofiler.profiler.init(**trace_info)
         info = {
             "request": {
                 "path": request.path,
@@ -128,7 +128,7 @@ class WsgiMiddleware(object):
             }
         }
         try:
-            with profiler.Trace(self.name, info=info):
+            with osprofiler.profiler.Trace(self.name, info=info):
                 return request.get_response(self.application)
         finally:
-            profiler._clean()
+            osprofiler.profiler._clean()
