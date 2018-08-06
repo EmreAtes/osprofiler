@@ -102,7 +102,7 @@ def stop(info=None):
         profiler.stop(info=info)
 
 
-def trace(name, info=None, hide_args=False, hide_result=True,
+def trace(name, info=None, hide_args=False, hide_result=False,
           allow_multiple_trace=True):
     """Trace decorator for functions.
 
@@ -188,7 +188,7 @@ def trace(name, info=None, hide_args=False, hide_result=True,
     return decorator
 
 
-def trace_cls(name, info=None, hide_args=False, hide_result=True,
+def trace_cls(name, info=None, hide_args=False, hide_result=False,
               trace_private=False, allow_multiple_trace=True,
               trace_class_methods=False, trace_static_methods=False):
     """Trace decorator for instances of class .

@@ -136,7 +136,7 @@ sentinal_service_name=mymaster).
 
 _sampling_rate_opt = cfg.StrOpt(
     "sampling_rate",
-    default=0.5,
+    default=1.0,
     help="""
 The sampling rate for osprofiler. A float that is between 1.0 and 0.0.
 1.0 would collect everything.
