@@ -28,7 +28,7 @@ from osprofiler.tests import test
 class ProfilerGlobMethodsTestCase(test.TestCase):
 
     def test_get_profiler_not_inited(self):
-        profiler._clean()
+        profiler.clean()
         self.assertIsNone(profiler.get())
 
     def test_get_profiler_and_init(self):
@@ -40,7 +40,7 @@ class ProfilerGlobMethodsTestCase(test.TestCase):
         self.assertEqual(p.get_id(), "2")
 
     def test_start_not_inited(self):
-        profiler._clean()
+        profiler.clean()
         profiler.start("name")
 
     def test_start(self):
@@ -50,7 +50,7 @@ class ProfilerGlobMethodsTestCase(test.TestCase):
         p.start.assert_called_once_with("name", info="info")
 
     def test_stop_not_inited(self):
-        profiler._clean()
+        profiler.clean()
         profiler.stop()
 
     def test_stop(self):
@@ -61,6 +61,13 @@ class ProfilerGlobMethodsTestCase(test.TestCase):
 
 
 class ProfilerTestCase(test.TestCase):
+
+    def test_profiler_get_shorten_id(self):
+        uuid_id = "4e3e0ec6-2938-40b1-8504-09eb1d4b0dee"
+        prof = profiler._Profiler("secret", base_id="1", parent_id="2")
+        result = prof.get_shorten_id(uuid_id)
+        expected = "850409eb1d4b0dee"
+        self.assertEqual(expected, result)
 
     def test_profiler_get_base_id(self):
         prof = profiler._Profiler("secret", base_id="1", parent_id="2")
@@ -167,7 +174,10 @@ class WithTraceTestCase(test.TestCase):
 
         self.assertRaises(ValueError, foo)
         mock_start.assert_called_once_with("foo", info=None)
-        mock_stop.assert_called_once_with(info={"etype": "ValueError"})
+        mock_stop.assert_called_once_with(info={
+            "etype": "ValueError",
+            "message": "bar"
+        })
 
 
 @profiler.trace("function", info={"info": "some_info"})

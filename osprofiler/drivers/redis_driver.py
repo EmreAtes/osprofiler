@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from debtcollector import removals
+
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 import six.moves.urllib.parse as parser
@@ -23,6 +25,10 @@ from osprofiler import exc
 
 
 class Redis(base.Driver):
+    @removals.removed_kwarg("db", message="'db' parameter is deprecated "
+                                          "and will be removed in future. "
+                                          "Please specify 'db' in "
+                                          "'connection_string' instead.")
     def __init__(self, connection_str, db=0, project=None,
                  service=None, host=None, conf=cfg.CONF, **kwargs):
         """Redis driver for OSProfiler."""
@@ -38,10 +44,9 @@ class Redis(base.Driver):
                 "'redis' manually. Use command:\n "
                 "'pip install redis'.")
 
-        parsed_url = parser.urlparse(self.connection_str)
-        self.db = StrictRedis(host=parsed_url.hostname,
-                              port=parsed_url.port,
-                              db=db)
+        # only connection over network is supported with schema
+        # redis://[:password]@host[:port][/db]
+        self.db = StrictRedis.from_url(self.connection_str)
         self.namespace = "osprofiler:"
         self.namespace_error = "osprofiler_error:"
 
@@ -147,6 +152,10 @@ class Redis(base.Driver):
 
 
 class RedisSentinel(Redis, base.Driver):
+    @removals.removed_kwarg("db", message="'db' parameter is deprecated "
+                                          "and will be removed in future. "
+                                          "Please specify 'db' in "
+                                          "'connection_string' instead.")
     def __init__(self, connection_str, db=0, project=None,
                  service=None, host=None, conf=cfg.CONF, **kwargs):
         """Redis driver for OSProfiler."""
