@@ -143,5 +143,6 @@ class Jaeger(base.Driver):
             tags["args"] = info["function"]["args"]
             tags["kwargs"] = info["function"]["kwargs"]
             tags["name"] = info["function"]["name"]
+	    tags["location"] = info["function"]["location"]
 
         return tags
