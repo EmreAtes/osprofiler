@@ -351,14 +351,9 @@ class Trace(object):
         >> finally:
               profiler.stop()
         """
-        source_file = inspect.getsourcefile(f)
-        try:
-            source_lines = inspect.getsourcelines(f)[1]
-        except IOError:
-            source_lines = -1
-        info['tracepoint_id'] = '%s:%d:%s' % (
-            source_file, source_lines, f.__name__
-        )
+        curframe = inspect.currentframe()
+        parframe = inspect.getouterframes(curframe, 2)[1][0]
+        info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(parframe)[:3]
         self._name = name
         self._info = info
 
