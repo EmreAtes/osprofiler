@@ -127,6 +127,10 @@ def trace(name, info=None, hide_args=False, hide_result=False,
     info["function"] = {}
 
     def decorator(f):
+        info['tracepoint_id'] = '%s:%d:%s' % (
+            inspect.getsourcefile(f), inspect.getsourcelines(f)[1],
+            f.__name__
+        )
         trace_times = getattr(f, "__traced__", 0)
         if not allow_multiple_trace and trace_times:
             raise ValueError("Function '%s' has already"
@@ -155,13 +159,6 @@ def trace(name, info=None, hide_args=False, hide_result=False,
                 # Get this once (as it should **not** be changing in
                 # subsequent calls).
                 info_["function"]["name"] = reflection.get_callable_name(f)
-                try:
-                    info_["function"]["location"] = '%s:%d' % (
-                        inspect.getsourcefile(f), inspect.getsourcelines(f)[1]
-                    )
-                except TypeError:
-                    # Must be something in the standard library
-                    pass
 
             if not hide_args:
                 info_["function"]["args"] = str(args)
