@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import inspect
+
 import six
 import webob.dec
 
@@ -127,6 +129,10 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
+        curframe = inspect.currentframe()
+        info['tracepoint_id'] = ''
+        for parframe in inspect.getouterframes(curframe):
+            info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
         try:
             with osprofiler.profiler.Trace(self.name, info=info):
                 return request.get_response(self.application)

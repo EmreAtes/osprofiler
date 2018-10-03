@@ -351,9 +351,10 @@ class Trace(object):
         >> finally:
               profiler.stop()
         """
-        curframe = inspect.currentframe()
-        parframe = inspect.getouterframes(curframe, 2)[1][0]
-        info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(parframe)[:3]
+        if 'tracepoint_id' not in info:
+            curframe = inspect.currentframe()
+            parframe = inspect.getouterframes(curframe, 2)[1][0]
+            info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(parframe)[:3]
         self._name = name
         self._info = info
 

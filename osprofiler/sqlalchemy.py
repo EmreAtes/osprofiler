@@ -14,6 +14,7 @@
 #    under the License.
 
 import contextlib
+import inspect
 import logging as log
 
 from oslo_utils import reflection
@@ -68,6 +69,10 @@ def _before_cursor_execute(name):
             "statement": statement,
             "params": params}
         }
+        curframe = inspect.currentframe()
+        info['tracepoint_id'] = ''
+        for parframe in inspect.getouterframes(curframe):
+            info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
         profiler.start(name, info=info)
 
     return handler
