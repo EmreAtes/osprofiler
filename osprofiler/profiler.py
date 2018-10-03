@@ -127,9 +127,13 @@ def trace(name, info=None, hide_args=False, hide_result=False,
     info["function"] = {}
 
     def decorator(f):
+        source_file = inspect.getsourcefile(f)
+        try:
+            source_lines = inspect.getsourcelines(f)[1]
+        except IOError:
+            source_lines = -1
         info['tracepoint_id'] = '%s:%d:%s' % (
-            inspect.getsourcefile(f), inspect.getsourcelines(f)[1],
-            f.__name__
+            source_file, source_lines, f.__name__
         )
         trace_times = getattr(f, "__traced__", 0)
         if not allow_multiple_trace and trace_times:
