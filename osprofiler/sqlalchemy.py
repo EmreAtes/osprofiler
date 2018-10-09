@@ -41,15 +41,16 @@ def enable():
 
 def add_tracing(sqlalchemy, engine, name, hide_result=True):
     """Add tracing to all sqlalchemy calls."""
+    pass
 
-    if not _DISABLED:
-        sqlalchemy.event.listen(engine, "before_cursor_execute",
-                                _before_cursor_execute(name))
-        sqlalchemy.event.listen(
-            engine, "after_cursor_execute",
-            _after_cursor_execute(hide_result=hide_result)
-        )
-        sqlalchemy.event.listen(engine, "handle_error", handle_error)
+    # if not _DISABLED:
+    #     sqlalchemy.event.listen(engine, "before_cursor_execute",
+    #                             _before_cursor_execute(name))
+    #     sqlalchemy.event.listen(
+    #         engine, "after_cursor_execute",
+    #         _after_cursor_execute(hide_result=hide_result)
+    #     )
+    #     sqlalchemy.event.listen(engine, "handle_error", handle_error)
 
 
 @contextlib.contextmanager
@@ -69,10 +70,11 @@ def _before_cursor_execute(name):
             "statement": statement,
             "params": params}
         }
-        curframe = inspect.currentframe()
         info['tracepoint_id'] = ''
-        for parframe in inspect.getouterframes(curframe):
-            info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
+        # # This gets the entire stack as the tracepoint_id
+        # curframe = inspect.currentframe()
+        # for parframe in inspect.getouterframes(curframe):
+        #     info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
         profiler.start(name, info=info)
 
     return handler

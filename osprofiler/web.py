@@ -129,10 +129,11 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
-        curframe = inspect.currentframe()
         info['tracepoint_id'] = ''
-        for parframe in inspect.getouterframes(curframe):
-            info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
+        # # This gets the entire stack as the tracepoint_id
+        # curframe = inspect.currentframe()
+        # for parframe in inspect.getouterframes(curframe):
+        #     info['tracepoint_id'] += '%s:%d:%s,' % parframe[1:4]
         try:
             with osprofiler.profiler.Trace(self.name, info=info):
                 return request.get_response(self.application)
