@@ -191,8 +191,8 @@ def trace(name, info=None, hide_args=False, hide_result=False,
 
 
 def trace_cls(name, info=None, hide_args=False, hide_result=False,
-              trace_private=False, allow_multiple_trace=True,
-              trace_class_methods=False, trace_static_methods=False):
+              trace_private=True, allow_multiple_trace=True,
+              trace_class_methods=True, trace_static_methods=True):
     """Trace decorator for instances of class .
 
     Very useful if you would like to add trace point on existing method:
@@ -308,7 +308,7 @@ class TracedMeta(type):
         super(TracedMeta, cls).__init__(cls_name, bases, attrs)
 
         trace_args = dict(getattr(cls, "__trace_args__", {}))
-        trace_private = trace_args.pop("trace_private", False)
+        trace_private = trace_args.pop("trace_private", True)
         allow_multiple_trace = trace_args.pop("allow_multiple_trace", True)
         if "name" not in trace_args:
             raise TypeError("Please specify __trace_args__ class level "
