@@ -17,8 +17,10 @@ import collections
 import datetime
 import functools
 import inspect
+import os
 import random
 import socket
+import thread
 import threading
 
 from oslo_utils import reflection
@@ -27,6 +29,9 @@ from oslo_utils import uuidutils
 from osprofiler import _utils as utils
 from osprofiler import notifier
 import osprofiler.opts
+
+
+SKELETON_ONLY = False
 
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
@@ -84,6 +89,8 @@ def start(name, info=None):
     :param info: Dictionary with extra trace information. For example in wsgi
                   it can be url, in rpc - message or in db sql - request.
     """
+    if SKELETON_ONLY:
+        return
     profiler = get()
     if profiler:
         profiler.start(name, info=info)
@@ -91,6 +98,8 @@ def start(name, info=None):
 
 def stop(info=None):
     """Send new stop notification if profiler instance is presented."""
+    if SKELETON_ONLY:
+        return
     profiler = get()
     if profiler:
         profiler.stop(info=info)
@@ -394,6 +403,15 @@ class _Profiler(object):
         self._trace_stack = collections.deque([base_id, parent_id or base_id])
         self._name = collections.deque()
         self._host = socket.gethostname()
+        # Add a tracepoint for new thread creation
+        self.start("new_thread", info={
+            'thread_id': thread.get_ident(),
+            'pid': os.getpid()
+        })
+
+    def __del__(self):
+        """Hopefully this is called when the thread stops execution"""
+        self.stop()
 
     def get_shorten_id(self, uuid_id):
         """Return shorten id of a uuid that will be used in OpenTracing drivers
