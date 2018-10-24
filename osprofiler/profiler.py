@@ -404,10 +404,7 @@ class _Profiler(object):
         self._name = collections.deque()
         self._host = socket.gethostname()
         # Add a tracepoint for new thread creation
-        self.start("new_thread", info={
-            'thread_id': thread.get_ident(),
-            'pid': os.getpid()
-        })
+        self.start("new_thread")
 
     def __del__(self):
         """Hopefully this is called when the thread stops execution"""
@@ -454,6 +451,8 @@ class _Profiler(object):
             return
         info = info or {}
         info["host"] = self._host
+        info['thread_id'] = thread.get_ident()
+        info['pid'] = os.getpid()
         self._name.append(name)
         self._trace_stack.append(str(uuidutils.generate_uuid()))
         self._notify("%s-start" % name, info)
