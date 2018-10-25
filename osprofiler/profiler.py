@@ -32,6 +32,7 @@ import osprofiler.opts
 
 
 SKELETON_ONLY = False
+CREATE_MANIFEST = True
 
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
@@ -39,6 +40,7 @@ __local_ctx = threading.local()
 
 
 def clean():
+    __local_ctx.profiler.cleanup()
     __local_ctx.profiler = None
 
 
@@ -142,8 +144,18 @@ def trace(name, info=None, hide_args=False, hide_result=False,
         except IOError:
             source_lines = -1
         info['tracepoint_id'] = '%s:%d:%s' % (
-            source_file, source_lines, f.__name__
+            source_file, source_lines, reflection.get_callable_name(f)
         )
+        manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
+        try:
+            os.makedirs(os.path.dirname(manifest_file))
+        except OSError:  # directory exists
+            pass
+
+        if CREATE_MANIFEST:
+            with open(manifest_file, 'w') as mf:
+                mf.write('1')
+
         trace_times = getattr(f, "__traced__", 0)
         if not allow_multiple_trace and trace_times:
             raise ValueError("Function '%s' has already"
@@ -167,6 +179,10 @@ def trace(name, info=None, hide_args=False, hide_result=False,
             # F823 local variable 'info'
             # (defined in enclosing scope on line xxx)
             # referenced before assignment
+            with open(manifest_file, 'r') as mf:
+                enabled = bool(int(mf.read()))
+            if not enabled:
+                return f(*args, **kwargs)
             info_ = info
             if "name" not in info_["function"]:
                 # Get this once (as it should **not** be changing in
@@ -366,11 +382,26 @@ class Trace(object):
             info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(parframe)[:3]
         self._name = name
         self._info = info
+        self.manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
+        try:
+            os.makedirs(os.path.dirname(self.manifest_file))
+        except OSError:  # directory exists
+            pass
+
+        if CREATE_MANIFEST:
+            with open(self.manifest_file, 'w') as mf:
+                mf.write('1')
 
     def __enter__(self):
+        with open(self.manifest_file, 'r') as mf:
+            self.enabled = bool(int(mf.read()))
+        if not self.enabled:
+            return
         start(self._name, info=self._info)
 
     def __exit__(self, etype, value, traceback):
+        if not self.enabled:
+            return
         if etype:
             info = {
                 "etype": reflection.get_class_name(etype),
@@ -405,10 +436,16 @@ class _Profiler(object):
         self._host = socket.gethostname()
         # Add a tracepoint for new thread creation
         self.start("new_thread")
+        self.cleaned = False
 
     def __del__(self):
         """Hopefully this is called when the thread stops execution"""
+        if not self.cleaned:
+            self.stop()
+
+    def cleanup(self):
         self.stop()
+        self.cleaned = True
 
     def get_shorten_id(self, uuid_id):
         """Return shorten id of a uuid that will be used in OpenTracing drivers

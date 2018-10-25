@@ -129,7 +129,7 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
-        info['tracepoint_id'] = ''
+        info['tracepoint_id'] = '%s:%s' % (request.path, request.method)
         # # This gets the entire stack as the tracepoint_id
         # curframe = inspect.currentframe()
         # for parframe in inspect.getouterframes(curframe):
