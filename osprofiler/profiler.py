@@ -33,6 +33,7 @@ import osprofiler.opts
 
 SKELETON_ONLY = False
 CREATE_MANIFEST = True
+TRACE_NEWTHREAD = False
 
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
@@ -180,7 +181,11 @@ def trace(name, info=None, hide_args=False, hide_result=False,
             # (defined in enclosing scope on line xxx)
             # referenced before assignment
             with open(manifest_file, 'r') as mf:
-                enabled = bool(int(mf.read()))
+                try:
+                    enabled = bool(int(mf.read()))
+                except ValueError:
+                    # Probably a race condition for tracepoint creation/deletion
+                    enabled = True
             if not enabled:
                 return f(*args, **kwargs)
             info_ = info
@@ -435,16 +440,18 @@ class _Profiler(object):
         self._name = collections.deque()
         self._host = socket.gethostname()
         # Add a tracepoint for new thread creation
-        self.start("new_thread")
+        if TRACE_NEWTHREAD:
+            self.start("new_thread")
         self.cleaned = False
 
     def __del__(self):
         """Hopefully this is called when the thread stops execution"""
-        if not self.cleaned:
+        if not self.cleaned and TRACE_NEWTHREAD:
             self.stop()
 
     def cleanup(self):
-        self.stop()
+        if TRACE_NEWTHREAD:
+            self.stop()
         self.cleaned = True
 
     def get_shorten_id(self, uuid_id):
