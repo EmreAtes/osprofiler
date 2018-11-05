@@ -144,9 +144,11 @@ class Redis(base.Driver):
             service = n["service"]
             host = n["info"]["host"]
             timestamp = n["timestamp"]
+            tracepoint_id = n.pop('tracepoint_id', None)
 
             self._append_results(trace_id, parent_id, name, project, service,
-                                 host, timestamp, n)
+                                 host, timestamp, raw_payload=n,
+                                 tracepoint_id=tracepoint_id)
 
         return self._parse_results()
 

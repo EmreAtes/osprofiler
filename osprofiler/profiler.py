@@ -527,6 +527,8 @@ class _Profiler(object):
                 "%Y-%m-%dT%H:%M:%S.%f"),
         }
         if info:
+            if 'tracepoint_id' in info:
+                payload['tracepoint_id'] = info['tracepoint_id']
             payload["info"] = info
 
         notifier.notify(payload)

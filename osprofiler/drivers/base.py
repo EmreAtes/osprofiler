@@ -165,7 +165,7 @@ class Driver(object):
         return sorted(tree, key=lambda x: x["info"]["started"])
 
     def _append_results(self, trace_id, parent_id, name, project, service,
-                        host, timestamp, raw_payload=None):
+                        host, timestamp, raw_payload=None, tracepoint_id=None):
         """Appends the notification to the dictionary of notifications.
 
         :param trace_id: UUID of current trace point
@@ -192,6 +192,8 @@ class Driver(object):
                 "trace_id": trace_id,
                 "parent_id": parent_id,
             }
+        if tracepoint_id:
+            self.result[trace_id]["tracepoint_id"] = tracepoint_id
 
         self.result[trace_id]["info"]["meta.raw_payload.%s"
                                       % name] = raw_payload
