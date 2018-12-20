@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import json
 import os
 import prettytable
@@ -162,6 +163,9 @@ class TraceCommands(BaseCommand):
     @cliutils.arg("--error-trace", dest="error_trace",
                   type=bool, default=False,
                   help="List all traces that contain error.")
+    @cliutils.arg("--since", dest="since",
+                  type=str, default='',
+                  help="List all traces since given date.")
     def list(self, args):
         """List all traces"""
         try:
@@ -172,11 +176,20 @@ class TraceCommands(BaseCommand):
         fields = ("base_id", "timestamp")
         pretty_table = prettytable.PrettyTable(fields)
         pretty_table.align = "l"
+        timeformat = '%Y-%m-%dT%H:%M:%S.%f'
+        if args.since:
+            since = datetime.datetime.strptime(
+                args.since, timeformat)
+        else:
+            since = datetime.datetime.fromtimestamp(0)
         if not args.error_trace:
             traces = engine.list_traces(fields)
         else:
             traces = engine.list_error_traces()
         for trace in traces:
+            if since > datetime.datetime.strptime(
+                    trace['timestamp'], timeformat):
+                continue
             row = [trace[field] for field in fields]
             pretty_table.add_row(row)
         if six.PY3:
