@@ -153,7 +153,7 @@ def trace(name, info=None, hide_args=False, hide_result=False,
         except OSError:  # directory exists
             pass
 
-        if CREATE_MANIFEST:
+        if CREATE_MANIFEST and not os.path.isfile(manifest_file):
             with open(manifest_file, 'w') as mf:
                 mf.write('1')
 
@@ -393,7 +393,7 @@ class Trace(object):
         except OSError:  # directory exists
             pass
 
-        if CREATE_MANIFEST:
+        if CREATE_MANIFEST and not os.path.isfile(self.manifest_file):
             with open(self.manifest_file, 'w') as mf:
                 mf.write('1')
 
