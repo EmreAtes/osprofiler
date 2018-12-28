@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import inspect
+import re
 
 import six
 import webob.dec
@@ -70,6 +70,8 @@ def enable(hmac_keys=None):
 
 class WsgiMiddleware(object):
     """WSGI Middleware that enables tracing for an application."""
+
+    uuid = re.compile(r'/[a-fA-F0-9]{8}-([a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}')
 
     def __init__(self, application, hmac_keys=None, enabled=False, **kwargs):
         """Initialize middleware with api-paste.ini arguments.
@@ -129,7 +131,8 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
-        info['tracepoint_id'] = '%s:%s' % (request.path, request.method)
+        tracepoint_id = '%s:%s' % (request.path, request.method)
+        info['tracepoint_id'] = self.uuid.sub('/UUID', tracepoint_id)
         # # This gets the entire stack as the tracepoint_id
         # curframe = inspect.currentframe()
         # for parframe in inspect.getouterframes(curframe):
