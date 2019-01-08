@@ -108,6 +108,41 @@ def stop(info=None):
         profiler.stop(info=info)
 
 
+def annotate(name, info=None):
+    """Annotate a variable to the traces.
+
+    Useful to notate e.g., queue lengths
+    >> profiler.annotate('neutron_sync_state_holders',
+    >>                   info={})
+    >> #code
+    """
+    if not info:
+        info = {}
+    curframe = inspect.currentframe()
+    parframe = inspect.getouterframes(curframe)[1]
+    info['tracepoint_id'] = '%s:%d:%s' % parframe[1:4]
+    manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
+    try:
+        os.makedirs(os.path.dirname(manifest_file))
+    except OSError:  # directory exists
+        pass
+
+    if CREATE_MANIFEST and not os.path.isfile(manifest_file):
+        with open(manifest_file, 'w') as mf:
+            mf.write('1')
+    with open(manifest_file, 'r') as mf:
+        try:
+            enabled = bool(int(mf.read()))
+        except ValueError:
+            # Probably a race condition for tracepoint creation/deletion
+            enabled = True
+    if not enabled:
+        return
+    profiler = get()
+    if profiler:
+        profiler.annotate(name, info=info)
+
+
 def trace(name, info=None, hide_args=False, hide_result=False,
           allow_multiple_trace=True):
     """Trace decorator for functions.
@@ -515,6 +550,23 @@ class _Profiler(object):
         info = info or {}
         info["host"] = self._host
         self._notify("%s-stop" % self._name.pop(), info)
+        self._trace_stack.pop()
+
+    def annotate(self, name, info=None):
+        """Annotate a single variable.
+
+        :param name: name of trace element (db, wsgi, rpc, etc..)
+        :param info: Dictionary with any useful information related to this
+                     trace element. (sql request, rpc message or url...)
+        """
+        if not self.get_base_id():
+            return
+        info = info or {}
+        info["host"] = self._host
+        info['thread_id'] = thread.get_ident()
+        info['pid'] = os.getpid()
+        self._trace_stack.append(str(uuidutils.generate_uuid()))
+        self._notify(name, info)
         self._trace_stack.pop()
 
     def _notify(self, name, info):
