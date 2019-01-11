@@ -369,10 +369,9 @@ class TracedMeta(type):
     mandatory key included - "name", that will define name of action to be
     traced - E.g. wsgi, rpc, db, etc...
     """
-    def __init__(cls, cls_name, bases, attrs):
-        super(TracedMeta, cls).__init__(cls_name, bases, attrs)
-
-        trace_args = dict(getattr(cls, "__trace_args__", {}))
+    def __new__(cls, cls_name, bases, attrs):
+        mycls = type.__new__(cls, cls_name, bases, attrs)
+        trace_args = dict(getattr(mycls, "__trace_args__", {}))
         trace_private = trace_args.pop("trace_private", True)
         allow_multiple_trace = trace_args.pop("allow_multiple_trace", True)
         if "name" not in trace_args:
@@ -381,22 +380,34 @@ class TracedMeta(type):
                             "e.g. __trace_args__ = {'name': 'rpc'}")
 
         traceable_attrs = []
+        is_classmethod = []
         for attr_name, attr_value in attrs.items():
             if not (inspect.ismethod(attr_value) or
                     inspect.isfunction(attr_value)):
+                if isinstance(attr_value, classmethod):
+                    is_classmethod.append(True)
+                    traceable_attrs.append((attr_name, attr_value.__func__))
                 continue
             if attr_name.startswith("__"):
                 continue
             if not trace_private and attr_name.startswith("_"):
                 continue
+            is_classmethod.append(False)
             traceable_attrs.append((attr_name, attr_value))
         if not allow_multiple_trace:
             # Check before doing any other further work (so we don't
             # halfway trace this class).
             _ensure_no_multiple_traced(traceable_attrs)
-        for attr_name, attr_value in traceable_attrs:
-            setattr(cls, attr_name, trace(**trace_args)(getattr(cls,
-                                                                attr_name)))
+        for is_cm, (attr_name, attr_value) in zip(is_classmethod,
+                                                  traceable_attrs):
+            if is_cm:
+                setattr(mycls, attr_name, classmethod(
+                    trace(**trace_args)(attr_value)))
+            else:
+                setattr(mycls, attr_name,
+                        trace(**trace_args)(attr_value))
+        return mycls
+
 
 
 class Trace(object):
