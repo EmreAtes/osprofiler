@@ -317,7 +317,9 @@ def trace_cls(name, info=None, hide_args=False, hide_result=False,
         traceable_attrs = []
         traceable_wrappers = []
         for attr_name, attr in inspect.getmembers(cls):
-            if not (inspect.ismethod(attr) or inspect.isfunction(attr)):
+            if not (inspect.ismethod(attr) or inspect.isfunction(attr) or
+                    isinstance(attr, staticmethod) or
+                    isinstance(attr, classmethod)):
                 continue
             wrapped_obj = None
             for cls_dict in mro_dicts:
