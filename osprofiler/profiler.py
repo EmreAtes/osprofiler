@@ -312,24 +312,26 @@ def trace_cls(name, info=None, hide_args=False, hide_result=False,
         return (True, None)
 
     def decorator(cls):
-        clss = cls if inspect.isclass(cls) else cls.__class__
-        mro_dicts = [c.__dict__ for c in inspect.getmro(clss)]
+        # clss = cls if inspect.isclass(cls) else cls.__class__
+        # mro_dicts = [c.__dict__ for c in inspect.getmro(clss)]
         traceable_attrs = []
         traceable_wrappers = []
-        for attr_name, attr in inspect.getmembers(cls):
-            if not (inspect.ismethod(attr) or inspect.isfunction(attr) or
-                    isinstance(attr, staticmethod) or
-                    isinstance(attr, classmethod)):
+        try:
+            attribute_iterator = cls.__dict__.items()
+        except AttributeError:
+            attribute_iterator = inspect.getmembers(cls)
+        for attr_name, attr in attribute_iterator:
+            if not inspect.isroutine(attr):
                 continue
-            wrapped_obj = None
-            for cls_dict in mro_dicts:
-                if attr_name in cls_dict:
-                    wrapped_obj = cls_dict[attr_name]
-                    break
-            should_wrap, wrapper = trace_checker(attr_name, wrapped_obj)
+            if inspect.isbuiltin(attr):
+                continue
+            should_wrap, wrapper = trace_checker(attr_name, attr)
             if not should_wrap:
                 continue
-            traceable_attrs.append((attr_name, attr))
+            if wrapper:
+                traceable_attrs.append((attr_name, attr.__func__))
+            else:
+                traceable_attrs.append((attr_name, attr))
             traceable_wrappers.append(wrapper)
         if not allow_multiple_trace:
             # Check before doing any other further work (so we don't
@@ -382,28 +384,33 @@ class TracedMeta(type):
                             "e.g. __trace_args__ = {'name': 'rpc'}")
 
         traceable_attrs = []
-        is_classmethod = []
+        wrappers = []
         for attr_name, attr_value in attrs.items():
-            if not (inspect.ismethod(attr_value) or
-                    inspect.isfunction(attr_value)):
-                if isinstance(attr_value, classmethod):
-                    is_classmethod.append(True)
-                    traceable_attrs.append((attr_name, attr_value.__func__))
+            if not inspect.isroutine(attr_value):
+                continue
+            if inspect.isbuiltin(attr_value):
                 continue
             if attr_name.startswith("__"):
                 continue
             if not trace_private and attr_name.startswith("_"):
                 continue
-            is_classmethod.append(False)
-            traceable_attrs.append((attr_name, attr_value))
+            if isinstance(attr_value, classmethod):
+                wrappers.append(classmethod)
+                traceable_attrs.append((attr_name, attr_value.__func__))
+            elif isinstance(attr_value, staticmethod):
+                wrappers.append(staticmethod)
+                traceable_attrs.append((attr_name, attr_value.__func__))
+            else:
+                wrappers.append(None)
+                traceable_attrs.append((attr_name, attr_value))
         if not allow_multiple_trace:
             # Check before doing any other further work (so we don't
             # halfway trace this class).
             _ensure_no_multiple_traced(traceable_attrs)
-        for is_cm, (attr_name, attr_value) in zip(is_classmethod,
-                                                  traceable_attrs):
-            if is_cm:
-                setattr(mycls, attr_name, classmethod(
+        for wrapper, (attr_name, attr_value) in zip(wrappers,
+                                                    traceable_attrs):
+            if wrapper:
+                setattr(mycls, attr_name, wrapper(
                     trace(**trace_args)(attr_value)))
             else:
                 setattr(mycls, attr_name,
