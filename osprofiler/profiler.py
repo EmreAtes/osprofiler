@@ -174,14 +174,18 @@ def trace(name, info=None, hide_args=False, hide_result=False,
     info["function"] = {}
 
     def decorator(f):
-        source_file = inspect.getsourcefile(f)
-        try:
-            source_lines = inspect.getsourcelines(f)[1]
-        except IOError:
-            source_lines = -1
-        info['tracepoint_id'] = '%s:%d:%s' % (
-            source_file, source_lines, reflection.get_callable_name(f)
-        )
+        if inspect.isbuiltin(f):
+            info['tracepoint_id'] = 'builtin:%s' % (
+                reflection.get_callable_name(f))
+        else:
+            source_file = inspect.getsourcefile(f)
+            try:
+                source_lines = inspect.getsourcelines(f)[1]
+            except IOError:
+                source_lines = -1
+            info['tracepoint_id'] = '%s:%d:%s' % (
+                source_file, source_lines, reflection.get_callable_name(f)
+            )
         manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
         try:
             os.makedirs(os.path.dirname(manifest_file))
