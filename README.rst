@@ -40,16 +40,16 @@ Docc-lab Changes
 - Added ``--since`` to ``osprofiler list``
 - Added ``tracepoint_id`` to spans. Only works fully for redis backend.
 
-    + For normal traces, location of function and full function name with class etc.
-    + For web calls, path that is called and request type
+  * For normal traces, location of function and full function name with class etc.
+  * For web calls, path that is called and request type
 
 - Disabled ``loginsight`` backend
 - Added sampling rate
 - Global variables at ``osprofiler/profiler.py``
 
-    + ``CREATE_MANIFEST``: create a file for each tracepoint encountered
-    + ``TRACE_NEWTHREAD``: trace thread creation events
-    + ``SKELETON_ONLY``: only collect thread creation events
+  * ``CREATE_MANIFEST``: create a file for each tracepoint encountered
+  * ``TRACE_NEWTHREAD``: trace thread creation events
+  * ``SKELETON_ONLY``: only collect thread creation events
 
 - Added ``profiler.annotate`` to add annotations to traces
 - Added ability to enable/disable tracepoints. Works by reading manifest files at each tracepoint
