@@ -54,3 +54,12 @@ Docc-lab Changes
 - Added ``profiler.annotate`` to add annotations to traces
 - Added ability to enable/disable tracepoints. Works by reading manifest files at each tracepoint
 - Fixed metaclass/builtin method tracing. These traces work correctly now. Can turn into a pull request to upstream.
+
+================
+ORE Installation
+================
+
+- Clone the repo
+- ``sudo pip install -r requirements.txt --no-deps --force-reinstall -U``
+- ``sudo pip install --no-deps --force-reinstall -U .``
+- ``sudo systemctl restart devstack@*``
