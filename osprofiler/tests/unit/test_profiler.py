@@ -69,6 +69,13 @@ class ProfilerTestCase(test.TestCase):
         expected = "850409eb1d4b0dee"
         self.assertEqual(expected, result)
 
+    def test_profiler_get_shorten_id_int(self):
+        short_id_int = 42
+        prof = profiler._Profiler("secret", base_id="1", parent_id="2")
+        result = prof.get_shorten_id(short_id_int)
+        expected = "2a"
+        self.assertEqual(expected, result)
+
     def test_profiler_get_base_id(self):
         prof = profiler._Profiler("secret", base_id="1", parent_id="2")
         self.assertEqual(prof.get_base_id(), "1")
@@ -253,7 +260,7 @@ class TraceDecoratorTestCase(test.TestCase):
                 "name": "osprofiler.tests.unit.test_profiler.test_fn_exc"
             }
         }
-        expected_stop_info = {"etype": "ValueError"}
+        expected_stop_info = {"etype": "ValueError", "message": ""}
         mock_start.assert_called_once_with("foo", info=expected_info)
         mock_stop.assert_called_once_with(info=expected_stop_info)
 

@@ -19,6 +19,7 @@ import functools
 import inspect
 import os
 import random
+import six
 import socket
 import thread
 import threading
@@ -30,11 +31,9 @@ from osprofiler import _utils as utils
 from osprofiler import notifier
 import osprofiler.opts
 
-
 SKELETON_ONLY = False
 CREATE_MANIFEST = True
 TRACE_NEWTHREAD = False
-
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
 __local_ctx = threading.local()
@@ -51,8 +50,8 @@ def _ensure_no_multiple_traced(traceable_attrs):
         if traced_times:
             raise ValueError("Can not apply new trace on top of"
                              " previously traced attribute '%s' since"
-                             " it has been traced %s times previously"
-                             % (attr_name, traced_times))
+                             " it has been traced %s times previously" %
+                             (attr_name, traced_times))
 
 
 def init(hmac_key, base_id=None, parent_id=None):
@@ -67,7 +66,8 @@ def init(hmac_key, base_id=None, parent_id=None):
     :returns: Profiler instance
     """
     if get() is None:
-        __local_ctx.profiler = _Profiler(hmac_key, base_id=base_id,
+        __local_ctx.profiler = _Profiler(hmac_key,
+                                         base_id=base_id,
                                          parent_id=parent_id)
     return __local_ctx.profiler
 
@@ -143,7 +143,10 @@ def annotate(name, info=None):
         profiler.annotate(name, info=info)
 
 
-def trace(name, info=None, hide_args=False, hide_result=False,
+def trace(name,
+          info=None,
+          hide_args=False,
+          hide_result=False,
           allow_multiple_trace=True):
     """Trace decorator for functions.
 
@@ -184,8 +187,7 @@ def trace(name, info=None, hide_args=False, hide_result=False,
             except IOError:
                 source_lines = -1
             info['tracepoint_id'] = '%s:%d:%s' % (
-                source_file, source_lines, reflection.get_callable_name(f)
-            )
+                source_file, source_lines, reflection.get_callable_name(f))
         manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
         try:
             os.makedirs(os.path.dirname(manifest_file))
@@ -242,7 +244,10 @@ def trace(name, info=None, hide_args=False, hide_result=False,
                 start(name, info=info_)
                 result = f(*args, **kwargs)
             except Exception as ex:
-                stop_info = {"etype": reflection.get_class_name(ex)}
+                stop_info = {
+                    "etype": reflection.get_class_name(ex),
+                    "message": six.text_type(ex)
+                }
                 raise
             else:
                 if not hide_result:
@@ -259,9 +264,14 @@ def trace(name, info=None, hide_args=False, hide_result=False,
     return decorator
 
 
-def trace_cls(name, info=None, hide_args=False, hide_result=False,
-              trace_private=True, allow_multiple_trace=True,
-              trace_class_methods=True, trace_static_methods=True):
+def trace_cls(name,
+              info=None,
+              hide_args=False,
+              hide_result=False,
+              trace_private=True,
+              allow_multiple_trace=True,
+              trace_class_methods=True,
+              trace_static_methods=True):
     """Trace decorator for instances of class .
 
     Very useful if you would like to add trace point on existing method:
@@ -342,7 +352,9 @@ def trace_cls(name, info=None, hide_args=False, hide_result=False,
             # halfway trace this class).
             _ensure_no_multiple_traced(traceable_attrs)
         for i, (attr_name, attr) in enumerate(traceable_attrs):
-            wrapped_method = trace(name, info=info, hide_args=hide_args,
+            wrapped_method = trace(name,
+                                   info=info,
+                                   hide_args=hide_args,
                                    hide_result=hide_result)(attr)
             wrapper = traceable_wrappers[i]
             if wrapper is not None:
@@ -377,6 +389,7 @@ class TracedMeta(type):
     mandatory key included - "name", that will define name of action to be
     traced - E.g. wsgi, rpc, db, etc...
     """
+
     def __new__(cls, cls_name, bases, attrs):
         mycls = type.__new__(cls, cls_name, bases, attrs)
         trace_args = dict(getattr(mycls, "__trace_args__", {}))
@@ -411,20 +424,16 @@ class TracedMeta(type):
             # Check before doing any other further work (so we don't
             # halfway trace this class).
             _ensure_no_multiple_traced(traceable_attrs)
-        for wrapper, (attr_name, attr_value) in zip(wrappers,
-                                                    traceable_attrs):
+        for wrapper, (attr_name, attr_value) in zip(wrappers, traceable_attrs):
             if wrapper:
-                setattr(mycls, attr_name, wrapper(
-                    trace(**trace_args)(attr_value)))
-            else:
                 setattr(mycls, attr_name,
-                        trace(**trace_args)(attr_value))
+                        wrapper(trace(**trace_args)(attr_value)))
+            else:
+                setattr(mycls, attr_name, trace(**trace_args)(attr_value))
         return mycls
 
 
-
 class Trace(object):
-
     def __init__(self, name, info=None):
         """With statement way to use profiler start()/stop().
 
@@ -445,7 +454,8 @@ class Trace(object):
         if 'tracepoint_id' not in info:
             curframe = inspect.currentframe()
             parframe = inspect.getouterframes(curframe, 2)[1][0]
-            info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(parframe)[:3]
+            info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(
+                parframe)[:3]
         self._name = name
         self._info = info
         self.manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
@@ -488,7 +498,6 @@ def _sampling_decision():
 
 
 class _Profiler(object):
-
     def __init__(self, hmac_key, base_id=None, parent_id=None):
         self.hmac_key = hmac_key
         if not base_id:
@@ -597,12 +606,16 @@ class _Profiler(object):
         if not self.get_base_id():
             return
         payload = {
-            "name": name,
-            "base_id": self.get_base_id(),
-            "trace_id": self.get_id(),
-            "parent_id": self.get_parent_id(),
-            "timestamp": datetime.datetime.utcnow().strftime(
-                "%Y-%m-%dT%H:%M:%S.%f"),
+            "name":
+            name,
+            "base_id":
+            self.get_base_id(),
+            "trace_id":
+            self.get_id(),
+            "parent_id":
+            self.get_parent_id(),
+            "timestamp":
+            datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f"),
         }
         if info:
             if 'tracepoint_id' in info:
