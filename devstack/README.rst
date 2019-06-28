@@ -16,6 +16,7 @@ that control this:
 
   * ``<empty>`` - default messaging driver is used
   * ``redis`` - Redis is installed
+  * ``jaeger`` - Jaeger is installed
 
   The default value of ``OSPROFILER_CONNECTION_STRING`` is set automatically
   depending on ``OSPROFILER_COLLECTOR`` value.
@@ -29,6 +30,7 @@ that control this:
   * ``elasticsearch://host:port`` - use Elasticsearch as trace storage
   * ``mongodb://host:port`` - use MongoDB as trace storage
   * ``loginsight://username:password@host`` - use LogInsight as trace collector/storage
+  * ``jaeger://host:port`` - use Jaeger as trace collector
 
 
 To configure DevStack and enable OSProfiler edit ``${DEVSTACK_DIR}/local.conf``
@@ -69,7 +71,7 @@ a comma-separated list of string values::
 **OSPROFILER_CONNECTION_STRING** - connection string to identify the driver.
 Default value is ``messaging://`` refers to messaging driver. For a full
 list of drivers please refer to
-``http://git.openstack.org/cgit/openstack/osprofiler/tree/osprofiler/drivers``.
+``https://git.openstack.org/cgit/openstack/osprofiler/tree/osprofiler/drivers``.
 Example: enable ElasticSearch driver with the server running on localhost::
 
     OSPROFILER_CONNECTION_STRING=elasticsearch://127.0.0.1:9200
@@ -80,3 +82,9 @@ that the default messaging driver is used.
 Example: enable Redis collector::
 
     OSPROFILER_COLLECTOR=redis
+
+**OSPROFILER_TRACE_SQLALCHEMY** - controls tracing of SQL statements. If enabled,
+all SQL statements processed by SQL Alchemy are added into traces. By default enabled.
+Example: disable SQL statements tracing::
+
+    OSPROFILER_TRACE_SQLALCHEMY=False
