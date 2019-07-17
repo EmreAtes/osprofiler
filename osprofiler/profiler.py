@@ -143,6 +143,12 @@ def annotate(name, info=None):
         profiler.annotate(name, info=info)
 
 
+def disable_tracing(f):
+    """Disable tracing using this decorator"""
+    f.__traced__ = -1
+    return f
+
+
 def trace(name,
           info=None,
           hide_args=False,
@@ -202,6 +208,9 @@ def trace(name,
         if not allow_multiple_trace and trace_times:
             raise ValueError("Function '%s' has already"
                              " been traced %s times" % (f, trace_times))
+        # Disable tracing by setting __traced__ to -1
+        if trace_times < 0:
+            return f
 
         try:
             f.__traced__ = trace_times + 1
