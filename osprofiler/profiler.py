@@ -54,6 +54,27 @@ def _ensure_no_multiple_traced(traceable_attrs):
                              (attr_name, traced_times))
 
 
+def serialize_profiler(asynch=False):
+    prof = get()
+    trace_info = None
+    if prof and asynch:
+        child_id = str(uuidutils.generate_uuid())
+        annotate("asynch_request", info={"child_id": child_id},
+                 get_parent_frame=True)
+        trace_info = {
+            "hmac_key": prof.hmac_key,
+            "base_id": child_id,
+            "parent_id": child_id
+        }
+    elif prof:
+        trace_info = {
+            "hmac_key": prof.hmac_key,
+            "base_id": prof.get_base_id(),
+            "parent_id": prof.get_id()
+        }
+    return trace_info
+
+
 def init(hmac_key, base_id=None, parent_id=None):
     """Init profiler instance for current thread.
 
@@ -108,7 +129,7 @@ def stop(info=None):
         profiler.stop(info=info)
 
 
-def annotate(name, info=None):
+def annotate(name, get_parent_frame=False, info=None):
     """Annotate a variable to the traces.
 
     Useful to notate e.g., queue lengths
@@ -119,7 +140,10 @@ def annotate(name, info=None):
     if not info:
         info = {}
     curframe = inspect.currentframe()
-    parframe = inspect.getouterframes(curframe)[1]
+    if get_parent_frame:
+        parframe = inspect.getouterframes(curframe)[2]
+    else:
+        parframe = inspect.getouterframes(curframe)[1]
     info['tracepoint_id'] = '%s:%d:%s' % parframe[1:4]
     manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
     try:
