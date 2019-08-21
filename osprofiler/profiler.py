@@ -21,7 +21,6 @@ import os
 import random
 import six
 import socket
-import thread
 import threading
 
 from oslo_utils import reflection
@@ -598,7 +597,7 @@ class _Profiler(object):
             return
         info = info or {}
         info["host"] = self._host
-        info['thread_id'] = thread.get_ident()
+        info['thread_id'] = threading.get_ident()
         info['pid'] = os.getpid()
         self._name.append(name)
         self._trace_stack.append(str(uuidutils.generate_uuid()))
@@ -629,7 +628,7 @@ class _Profiler(object):
             return
         info = info or {}
         info["host"] = self._host
-        info['thread_id'] = thread.get_ident()
+        info['thread_id'] = threading.get_ident()
         info['pid'] = os.getpid()
         self._trace_stack.append(str(uuidutils.generate_uuid()))
         self._notify(name, info)
