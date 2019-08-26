@@ -21,7 +21,10 @@ import os
 import random
 import six
 import socket
-import thread
+try:
+    import thread
+except:
+    pass
 import threading
 
 from oslo_utils import reflection
