@@ -185,7 +185,8 @@ def trace(name,
           info=None,
           hide_args=False,
           hide_result=False,
-          allow_multiple_trace=True):
+          allow_multiple_trace=True,
+          immortal=False):
     """Trace decorator for functions.
 
     Very useful if you would like to add trace point on existing function:
@@ -262,12 +263,15 @@ def trace(name,
             # F823 local variable 'info'
             # (defined in enclosing scope on line xxx)
             # referenced before assignment
-            with open(manifest_file, 'r') as mf:
-                try:
-                    enabled = bool(int(mf.read()))
-                except ValueError:
-                    # Probably a race condition for tracepoint creation/deletion
-                    enabled = True
+            if immortal:
+                enabled = True
+            else:
+                with open(manifest_file, 'r') as mf:
+                    try:
+                        enabled = bool(int(mf.read()))
+                    except ValueError:
+                        # Probably a race condition for tracepoint creation/deletion
+                        enabled = True
             if not enabled:
                 return f(*args, **kwargs)
             info_ = info
