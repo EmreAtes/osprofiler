@@ -63,7 +63,7 @@ def serialize_profiler(asynch=False):
     if prof and asynch:
         child_id = str(uuidutils.generate_uuid())
         annotate("asynch_request", info={"child_id": child_id},
-                 get_parent_frame=True)
+                 get_parent_frame=True, immortal=True)
         trace_info = {
             "hmac_key": prof.hmac_key,
             "base_id": child_id,
@@ -132,8 +132,10 @@ def stop(info=None):
         profiler.stop(info=info)
 
 
-def annotate(name, get_parent_frame=False, info=None):
+def annotate(name, get_parent_frame=False, info=None, immortal=False):
     """Annotate a variable to the traces.
+
+    immortal parameter removes capability to disable.
 
     Useful to notate e.g., queue lengths
     >> profiler.annotate('neutron_sync_state_holders',
@@ -157,12 +159,15 @@ def annotate(name, get_parent_frame=False, info=None):
     if CREATE_MANIFEST and not os.path.isfile(manifest_file):
         with open(manifest_file, 'w') as mf:
             mf.write('1')
-    with open(manifest_file, 'r') as mf:
-        try:
-            enabled = bool(int(mf.read()))
-        except ValueError:
-            # Probably a race condition for tracepoint creation/deletion
-            enabled = True
+    if immortal:
+        enabled = True
+    else:
+        with open(manifest_file, 'r') as mf:
+            try:
+                enabled = bool(int(mf.read()))
+            except ValueError:
+                # Probably a race condition for tracepoint creation/deletion
+                enabled = True
     if not enabled:
         return
     profiler = get()
