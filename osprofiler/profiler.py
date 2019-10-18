@@ -85,7 +85,7 @@ def serialize_profiler(asynch=False):
     return trace_info
 
 
-def init(hmac_key, base_id=None, parent_id=None, request_type=None):
+def init(hmac_key, base_id=None, parent_id=None, request_name=None):
     """Init profiler instance for current thread.
 
     You should call profiler.init() before using osprofiler.
@@ -100,7 +100,7 @@ def init(hmac_key, base_id=None, parent_id=None, request_type=None):
         __local_ctx.profiler = _Profiler(hmac_key,
                                          base_id=base_id,
                                          parent_id=parent_id,
-                                         request_type=request_type)
+                                         request_name=request_name)
     return __local_ctx.profiler
 
 
@@ -551,7 +551,7 @@ def _sampling_decision():
 
 
 class _Profiler(object):
-    def __init__(self, hmac_key, base_id=None, parent_id=None, request_type=None):
+    def __init__(self, hmac_key, base_id=None, parent_id=None, request_name=None):
         self.hmac_key = hmac_key
         if not base_id:
             print("EMRE: Starting to trace something.")
@@ -562,7 +562,7 @@ class _Profiler(object):
         self._trace_stack = collections.deque([base_id, parent_id or base_id])
         self._name = collections.deque()
         self._host = socket.gethostname()
-        self._request_type = request_type
+        self._request_type = request_name
         # Add a tracepoint for new thread creation
         if TRACE_NEWTHREAD:
             self.start("new_thread")
@@ -578,9 +578,9 @@ class _Profiler(object):
             self.stop()
         self.cleaned = True
 
-    def set_request_type(self, request_type):
+    def set_request_type(self, request_name):
         assert(request_name in REQUEST_TYPES)
-        self._request_type = request_type
+        self._request_type = request_name
 
     def get_request_type(self):
         return self._request_type
