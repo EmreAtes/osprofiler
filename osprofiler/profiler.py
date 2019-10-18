@@ -59,6 +59,8 @@ def _ensure_no_multiple_traced(traceable_attrs):
 
 
 def set_request_type(request_type):
+    assert(request_type in REQUEST_TYPES)
+    __local_ctx.request_type = request_type
     prof = get()
     if prof:
         prof.set_request_type(request_type)
@@ -591,8 +593,6 @@ class _Profiler(object):
         self.cleaned = True
 
     def set_request_type(self, request_type):
-        assert(request_type in REQUEST_TYPES)
-        __local_ctx.request_type = request_type
         self._request_type = request_type
 
     def get_request_type(self):
