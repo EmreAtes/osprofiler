@@ -37,7 +37,17 @@ import osprofiler.opts
 SKELETON_ONLY = False
 CREATE_MANIFEST = True
 TRACE_NEWTHREAD = False
-REQUEST_TYPES = set(["ServerCreate", "ServerDelete", "ServerList"])
+REQUEST_TYPES = set([
+    'FixedIPAdd', 'FixedIPRemove', 'FloatingIPAdd', 'FloatingIPRemove',
+    'NetworkAdd', 'NetworkRemove', 'PortAdd', 'PortRemove', 'ServerCreate',
+    'ServerDelete', 'ServerDumpCreate', 'ServerList', 'ServerLock',
+    'ServerMigrate', 'ServerPause', 'ServerReboot', 'ServerRebuild',
+    'ServerRescue', 'ServerResize', 'ServerRestore', 'ServerResume',
+    'ServerSecurityGroupAdd', 'ServerSecurityGroupRemove', 'ServerSet',
+    'ServerShelve', 'ServerShow', 'ServerSsh', 'ServerStart', 'ServerStop',
+    'ServerSuspend', 'ServerUnlock', 'ServerUnpause', 'ServerUnrescue',
+    'ServerUnset', 'ServerUnshelve', 'ServerVolumeAdd', 'ServerVolumeRemove'
+])
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
 __local_ctx = threading.local()
