@@ -25,7 +25,7 @@ import osprofiler.profiler
 # Trace keys that are required or optional, any other
 # keys that are present will cause the trace to be rejected...
 _REQUIRED_KEYS = ("base_id", "hmac_key")
-_OPTIONAL_KEYS = ("parent_id",)
+_OPTIONAL_KEYS = ("parent_id", "request_type")
 
 #: Http header that will contain the needed traces data.
 X_TRACE_INFO = "X-Trace-Info"
@@ -38,7 +38,8 @@ def get_trace_id_headers():
     """Adds the trace id headers (and any hmac) into provided dictionary."""
     p = osprofiler.profiler.get()
     if p and p.hmac_key:
-        data = {"base_id": p.get_base_id(), "parent_id": p.get_id()}
+        data = {"base_id": p.get_base_id(), "parent_id": p.get_id(),
+                "request_type": p.get_request_type()}
         pack = utils.signed_pack(data, p.hmac_key)
         return {
             X_TRACE_INFO: pack[0],

@@ -37,6 +37,7 @@ import osprofiler.opts
 SKELETON_ONLY = False
 CREATE_MANIFEST = True
 TRACE_NEWTHREAD = False
+REQUEST_TYPES = set(["ServerCreate", "ServerDelete", "ServerList"])
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
 __local_ctx = threading.local()
@@ -55,6 +56,12 @@ def _ensure_no_multiple_traced(traceable_attrs):
                              " previously traced attribute '%s' since"
                              " it has been traced %s times previously" %
                              (attr_name, traced_times))
+
+
+def request_type(request_name):
+    prof = get()
+    if prof:
+        prof.set_request_type(request_name)
 
 
 def serialize_profiler(asynch=False):
@@ -78,7 +85,7 @@ def serialize_profiler(asynch=False):
     return trace_info
 
 
-def init(hmac_key, base_id=None, parent_id=None):
+def init(hmac_key, base_id=None, parent_id=None, request_type=None):
     """Init profiler instance for current thread.
 
     You should call profiler.init() before using osprofiler.
@@ -92,7 +99,8 @@ def init(hmac_key, base_id=None, parent_id=None):
     if get() is None:
         __local_ctx.profiler = _Profiler(hmac_key,
                                          base_id=base_id,
-                                         parent_id=parent_id)
+                                         parent_id=parent_id,
+                                         request_type=request_type)
     return __local_ctx.profiler
 
 
@@ -543,7 +551,7 @@ def _sampling_decision():
 
 
 class _Profiler(object):
-    def __init__(self, hmac_key, base_id=None, parent_id=None):
+    def __init__(self, hmac_key, base_id=None, parent_id=None, request_type=None):
         self.hmac_key = hmac_key
         if not base_id:
             print("EMRE: Starting to trace something.")
@@ -554,6 +562,7 @@ class _Profiler(object):
         self._trace_stack = collections.deque([base_id, parent_id or base_id])
         self._name = collections.deque()
         self._host = socket.gethostname()
+        self._request_type = request_type
         # Add a tracepoint for new thread creation
         if TRACE_NEWTHREAD:
             self.start("new_thread")
@@ -568,6 +577,13 @@ class _Profiler(object):
         if TRACE_NEWTHREAD:
             self.stop()
         self.cleaned = True
+
+    def set_request_type(self, request_type):
+        assert(request_name in REQUEST_TYPES)
+        self._request_type = request_type
+
+    def get_request_type(self):
+        return self._request_type
 
     def get_shorten_id(self, uuid_id):
         """Return shorten id of a uuid that will be used in OpenTracing drivers
