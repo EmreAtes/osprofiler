@@ -104,6 +104,10 @@ def init(hmac_key, base_id=None, parent_id=None, request_name=None):
     return __local_ctx.profiler
 
 
+def _request_type():
+    return getattr(__local_ctx, "request_type", None)
+
+
 def get():
     """Get profiler instance.
 
@@ -170,6 +174,8 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False):
     if immortal:
         enabled = True
     else:
+        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
+            manifest_file = manifest_file + ":" + _request_type()
         with open(manifest_file, 'r') as mf:
             try:
                 enabled = bool(int(mf.read()))
@@ -274,6 +280,8 @@ def trace(name,
             if immortal:
                 enabled = True
             else:
+                if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
+                    manifest_file = manifest_file + ":" + _request_type()
                 with open(manifest_file, 'r') as mf:
                     try:
                         enabled = bool(int(mf.read()))
@@ -522,7 +530,10 @@ class Trace(object):
                 mf.write('1')
 
     def __enter__(self):
-        with open(self.manifest_file, 'r') as mf:
+        manifest_file = self.manifest_file
+        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
+            manifest_file = manifest_file + ":" + _request_type()
+        with open(manifest_file, 'r') as mf:
             self.enabled = bool(int(mf.read()))
         if not self.enabled:
             return
@@ -580,6 +591,7 @@ class _Profiler(object):
 
     def set_request_type(self, request_name):
         assert(request_name in REQUEST_TYPES)
+        __local_ctx.request_type = request_name
         self._request_type = request_name
 
     def get_request_type(self):
