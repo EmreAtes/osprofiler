@@ -59,7 +59,7 @@ def _ensure_no_multiple_traced(traceable_attrs):
 
 
 def set_request_type(request_type):
-    assert(request_type in REQUEST_TYPES)
+    assert request_type in REQUEST_TYPES, "{} not in {}".format(request_type, REQUEST_TYPES)
     __local_ctx.request_type = request_type
     prof = get()
     if prof:
@@ -76,13 +76,15 @@ def serialize_profiler(asynch=False):
         trace_info = {
             "hmac_key": prof.hmac_key,
             "base_id": child_id,
-            "parent_id": child_id
+            "parent_id": child_id,
+            "request_type": prof.get_request_type()
         }
     elif prof:
         trace_info = {
             "hmac_key": prof.hmac_key,
             "base_id": prof.get_base_id(),
-            "parent_id": prof.get_id()
+            "parent_id": prof.get_id(),
+            "request_type": prof.get_request_type()
         }
     return trace_info
 
@@ -101,8 +103,9 @@ def init(hmac_key, base_id=None, parent_id=None, request_type=None):
     if get() is None:
         __local_ctx.profiler = _Profiler(hmac_key,
                                          base_id=base_id,
-                                         parent_id=parent_id,
-                                         request_type=request_type)
+                                         parent_id=parent_id)
+        if request_type:
+            set_request_type(request_type)
     return __local_ctx.profiler
 
 
@@ -282,10 +285,12 @@ def trace(name,
             if immortal:
                 enabled = True
             else:
-                nonlocal manifest_file
-                if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
-                    manifest_file = manifest_file + ":" + _request_type()
-                with open(manifest_file, 'r') as mf:
+                manifest_file_ = manifest_file
+                if _request_type():
+                    newfile = manifest_file_ + ":" + _request_type()
+                    if os.path.exists(newfile):
+                        manifest_file_ = newfile
+                with open(manifest_file_, 'r') as mf:
                     try:
                         enabled = bool(int(mf.read()))
                     except ValueError:
@@ -565,7 +570,7 @@ def _sampling_decision():
 
 
 class _Profiler(object):
-    def __init__(self, hmac_key, base_id=None, parent_id=None, request_type=None):
+    def __init__(self, hmac_key, base_id=None, parent_id=None):
         self.hmac_key = hmac_key
         if not base_id:
             print("EMRE: Starting to trace something.")
@@ -576,11 +581,11 @@ class _Profiler(object):
         self._trace_stack = collections.deque([base_id, parent_id or base_id])
         self._name = collections.deque()
         self._host = socket.gethostname()
-        self._request_type = request_type
         # Add a tracepoint for new thread creation
         if TRACE_NEWTHREAD:
             self.start("new_thread")
         self.cleaned = False
+        self._request_type = None
 
     def __del__(self):
         """Hopefully this is called when the thread stops execution"""
