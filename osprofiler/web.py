@@ -147,8 +147,6 @@ class WsgiMiddleware(object):
 
 def init_from_headers(headers, hmac_keys=None):
     """Init osprofiler using the headers"""
-    from remote_pdb import RemotePdb
-    RemotePdb('127.0.0.1', 4444).set_trace()
     if isinstance(hmac_keys, str):
         hmac_keys = [hmac_keys]
 
