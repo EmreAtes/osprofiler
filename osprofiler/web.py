@@ -100,7 +100,8 @@ class WsgiMiddleware(object):
             return cls(app, **local_conf)
         return filter_
 
-    def _trace_is_valid(self, trace_info):
+    @classmethod
+    def trace_is_valid(cls, trace_info):
         if not isinstance(trace_info, dict):
             return False
         trace_keys = set(six.iterkeys(trace_info))
@@ -120,7 +121,7 @@ class WsgiMiddleware(object):
                                          request.headers.get(X_TRACE_HMAC),
                                          _HMAC_KEYS or self.hmac_keys)
 
-        if not self._trace_is_valid(trace_info):
+        if not self.trace_is_valid(trace_info):
             return request.get_response(self.application)
 
         osprofiler.profiler.init(**trace_info)
@@ -143,3 +144,34 @@ class WsgiMiddleware(object):
                 return request.get_response(self.application)
         finally:
             osprofiler.profiler.clean()
+
+def init_from_headers(headers, hmac_keys=None):
+    """Init osprofiler using the headers"""
+    from remote_pdb import RemotePdb
+    RemotePdb('127.0.0.1', 4444).set_trace()
+    if isinstance(hmac_keys, str):
+        hmac_keys = [hmac_keys]
+
+    trace_info = utils.signed_unpack(headers.get('HTTP_X_TRACE_INFO'),
+                                     headers.get('HTTP_X_TRACE_HMAC'),
+                                     _HMAC_KEYS or hmac_keys)
+
+    if not WsgiMiddleware.trace_is_valid(trace_info):
+        return
+
+    osprofiler.profiler.init(**trace_info)
+    return
+
+def info_from_headers(headers):
+    """Get profiler info from headers"""
+    info = {
+        "request": {
+            "path": headers.get('PATH_INFO', ''),
+            "query": headers.get('QUERY_STRING', ''),
+            "method": headers.get('REQUEST_METHOD', ''),
+            "scheme": headers.get('REQUEST_SCHEME', '')
+        }
+    }
+    tracepoint_id = '%s:%s' % (info['request']['path'], info['request']['method'])
+    info['tracepoint_id'] = WsgiMiddleware.uuid.sub('/UUID', tracepoint_id)
+    return info
