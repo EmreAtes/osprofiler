@@ -37,7 +37,6 @@ class TraceCommands(BaseCommand):
     @cliutils.arg("trace", help="File with trace or trace id")
     @cliutils.arg("--connection-string", dest="conn_str",
                   default=(cliutils.env("OSPROFILER_CONNECTION_STRING")),
-                  required=True,
                   help="Storage driver's connection string. Defaults to "
                        "env[OSPROFILER_CONNECTION_STRING] if set")
     @cliutils.arg("--transport-url", dest="transport_url",
@@ -59,6 +58,12 @@ class TraceCommands(BaseCommand):
     @cliutils.arg("--out", dest="file_name", help="save output in file")
     def show(self, args):
         """Display trace results in HTML, JSON or DOT format."""
+
+        if not args.conn_str:
+            raise exc.CommandError(
+                "You must provide connection string via"
+                " either --connection-string or "
+                "via env[OSPROFILER_CONNECTION_STRING]")
 
         trace = None
 
@@ -157,7 +162,6 @@ class TraceCommands(BaseCommand):
 
     @cliutils.arg("--connection-string", dest="conn_str",
                   default=cliutils.env("OSPROFILER_CONNECTION_STRING"),
-                  required=True,
                   help="Storage driver's connection string. Defaults to "
                        "env[OSPROFILER_CONNECTION_STRING] if set")
     @cliutils.arg("--error-trace", dest="error_trace",
@@ -168,6 +172,11 @@ class TraceCommands(BaseCommand):
                   help="List all traces since given date.")
     def list(self, args):
         """List all traces"""
+        if not args.conn_str:
+            raise exc.CommandError(
+                "You must provide connection string via"
+                " either --connection-string or "
+                "via env[OSPROFILER_CONNECTION_STRING]")
         try:
             engine = base.get_driver(args.conn_str, **args.__dict__)
         except Exception as e:
