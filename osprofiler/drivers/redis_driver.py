@@ -73,9 +73,8 @@ class Redis(base.Driver):
         data = info.copy()
         data["project"] = self.project
         data["service"] = self.service
-        key = self.namespace + data["base_id"] + "_" + data["trace_id"] + "_" + \
-            data["timestamp"]
-        self.db.set(key, jsonutils.dumps(data))
+        key = self.namespace + data["base_id"]
+        self.db.append(key, jsonutils.dumps(data))
 
         if (self.filter_error_trace
                 and data.get("info", {}).get("etype") is not None):
@@ -88,7 +87,7 @@ class Redis(base.Driver):
             "base_id": data["base_id"],
             "timestamp": data["timestamp"]
         })
-        self.db.set(key, value)
+        self.db.append(key, value)
 
     def list_traces(self, fields=None):
         """Query all traces from the storage.
