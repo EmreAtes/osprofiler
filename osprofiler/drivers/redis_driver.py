@@ -103,7 +103,7 @@ class Redis(base.Driver):
         # To query all traces we first need to get all keys, then
         # get all events, sort them and pick up only the first one
         ids = self.db.scan_iter(match=self.namespace + "*")
-        traces = [jsonutils.loads(self.db.get(i)) for i in ids]
+        traces = [jsonutils.loads(self.db.get(i).decode().split("}{")[0] + "}") for i in ids]
         traces.sort(key=lambda x: x["timestamp"])
         seen_ids = set()
         result = []
@@ -117,7 +117,7 @@ class Redis(base.Driver):
     def list_error_traces(self):
         """Returns all traces that have error/exception."""
         ids = self.db.scan_iter(match=self.namespace_error + "*")
-        traces = [jsonutils.loads(self.db.get(i)) for i in ids]
+        traces = [jsonutils.loads(self.db.get(i).decode().split("}{")[0] + "}") for i in ids]
         traces.sort(key=lambda x: x["timestamp"])
         seen_ids = set()
         result = []
@@ -133,9 +133,9 @@ class Redis(base.Driver):
 
         :param base_id: Base id of trace elements.
         """
-        for key in self.db.scan_iter(match=self.namespace + base_id + "*"):
-            data = self.db.get(key)
-            n = jsonutils.loads(data)
+        data = self.db.get(self.namespace + base_id).decode()
+        for entry in data[1:-1].split("}{"):
+            n = jsonutils.loads("{" + entry + "}")
             trace_id = n["trace_id"]
             parent_id = n["parent_id"]
             name = n["name"]
