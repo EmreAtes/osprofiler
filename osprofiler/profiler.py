@@ -212,8 +212,8 @@ def disable_tracing(f):
 
 def trace(name,
           info=None,
-          hide_args=False,
-          hide_result=False,
+          hide_args=True,
+          hide_result=True,
           allow_multiple_trace=True,
           immortal=False):
     """Trace decorator for functions.
@@ -345,8 +345,8 @@ def trace(name,
 
 def trace_cls(name,
               info=None,
-              hide_args=False,
-              hide_result=False,
+              hide_args=True,
+              hide_result=True,
               trace_private=True,
               allow_multiple_trace=True,
               trace_class_methods=True,
