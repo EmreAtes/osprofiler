@@ -134,7 +134,7 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
-        tracepoint_id = '%s/%s:%s' % (getpass.geuser(), request.path, request.method)
+        tracepoint_id = '%s/%s:%s' % (getpass.getuser(), request.path, request.method)
         info['tracepoint_id'] = self.uuid.sub('/UUID', tracepoint_id)
         # # This gets the entire stack as the tracepoint_id
         # curframe = inspect.currentframe()
