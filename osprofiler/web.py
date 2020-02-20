@@ -134,7 +134,7 @@ class WsgiMiddleware(object):
                 "scheme": request.scheme
             }
         }
-        tracepoint_id = '%s/%s:%s' % (getpass.getuser(), request.path, request.method)
+        tracepoint_id = '%s%s:%s' % (getpass.getuser(), request.path, request.method)
         info['tracepoint_id'] = self.uuid.sub('/UUID', tracepoint_id)
         # # This gets the entire stack as the tracepoint_id
         # curframe = inspect.currentframe()
@@ -171,6 +171,6 @@ def info_from_headers(headers):
             "scheme": headers.get('REQUEST_SCHEME', '')
         }
     }
-    tracepoint_id = '%s/%s:%s' % (getpass.getuser(), info['request']['path'], info['request']['method'])
+    tracepoint_id = '%s%s:%s' % (getpass.getuser(), info['request']['path'], info['request']['method'])
     info['tracepoint_id'] = WsgiMiddleware.uuid.sub('/UUID', tracepoint_id)
     return info

@@ -177,7 +177,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False):
         parframe = inspect.getouterframes(curframe)[2]
     else:
         parframe = inspect.getouterframes(curframe)[1]
-    info['tracepoint_id'] = '%s/%s:%d:%s' % (getpass.getuser(), parframe[1:4])
+    info['tracepoint_id'] = '%s%s:%d:%s' % (getpass.getuser(), *parframe[1:4])
     manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
     try:
         os.makedirs(os.path.dirname(manifest_file))
@@ -256,7 +256,7 @@ def trace(name,
                 source_lines = inspect.getsourcelines(f)[1]
             except IOError:
                 source_lines = -1
-            info['tracepoint_id'] = '%s/%s:%d:%s' % (
+            info['tracepoint_id'] = '%s%s:%d:%s' % (
                 getpass.getuser(), source_file, source_lines,
                 reflection.get_callable_name(f))
         manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
@@ -536,8 +536,8 @@ class Trace(object):
         if 'tracepoint_id' not in info:
             curframe = inspect.currentframe()
             parframe = inspect.getouterframes(curframe, 2)[1][0]
-            info['tracepoint_id'] = '%s/%s:%d:%s' % (
-                getpass.getuser(), inspect.getframeinfo(parframe)[:3])
+            info['tracepoint_id'] = '%s%s:%d:%s' % (
+                getpass.getuser(), *inspect.getframeinfo(parframe)[:3])
         self._name = name
         self._info = info
         self.manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
