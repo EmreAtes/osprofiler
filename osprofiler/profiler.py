@@ -16,6 +16,7 @@
 import collections
 import datetime
 import functools
+import getpass
 import inspect
 import os
 import random
@@ -176,7 +177,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False):
         parframe = inspect.getouterframes(curframe)[2]
     else:
         parframe = inspect.getouterframes(curframe)[1]
-    info['tracepoint_id'] = '%s:%d:%s' % parframe[1:4]
+    info['tracepoint_id'] = '%s/%s:%d:%s' % (getpass.getuser(), parframe[1:4])
     manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
     try:
         os.makedirs(os.path.dirname(manifest_file))
@@ -246,7 +247,8 @@ def trace(name,
 
     def decorator(f):
         if inspect.isbuiltin(f):
-            info['tracepoint_id'] = 'builtin:%s' % (
+            info['tracepoint_id'] = '%s/builtin:%s' % (
+                getpass.getuser(),
                 reflection.get_callable_name(f))
         else:
             source_file = inspect.getsourcefile(f)
@@ -254,8 +256,9 @@ def trace(name,
                 source_lines = inspect.getsourcelines(f)[1]
             except IOError:
                 source_lines = -1
-            info['tracepoint_id'] = '%s:%d:%s' % (
-                source_file, source_lines, reflection.get_callable_name(f))
+            info['tracepoint_id'] = '%s/%s:%d:%s' % (
+                getpass.getuser(), source_file, source_lines,
+                reflection.get_callable_name(f))
         manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
         try:
             os.makedirs(os.path.dirname(manifest_file))
@@ -533,8 +536,8 @@ class Trace(object):
         if 'tracepoint_id' not in info:
             curframe = inspect.currentframe()
             parframe = inspect.getouterframes(curframe, 2)[1][0]
-            info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(
-                parframe)[:3]
+            info['tracepoint_id'] = '%s/%s:%d:%s' % (
+                getpass.getuser(), inspect.getframeinfo(parframe)[:3])
         self._name = name
         self._info = info
         self.manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
