@@ -48,11 +48,15 @@ class Redis(base.Driver):
         # redis://[:password]@host[:port][/db]
         self.db = StrictRedis.from_url(self.connection_str)
         self.namespace = "osprofiler:"
+        self.trace_namespace = "osprofiler_traces"
         self.namespace_error = "osprofiler_error:"
 
     @classmethod
     def get_name(cls):
         return "redis"
+
+    def notify_trace(self, trace_id):
+        self.db.rpush(self.trace_namespace, trace_id)
 
     def notify(self, info):
         """Send notifications to Redis.

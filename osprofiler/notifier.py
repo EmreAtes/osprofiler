@@ -16,12 +16,15 @@
 from osprofiler.drivers import base
 
 
-def _noop_notifier(info, context=None):
+class _noop_notifier:
     """Do nothing on notify()."""
+    @staticmethod
+    def notify(info, context=None):
+        pass
 
 
 # NOTE(boris-42): By default we are using noop notifier.
-__notifier = _noop_notifier
+__notifier = _noop_notifier()
 __driver_cache = {}
 
 
@@ -30,12 +33,16 @@ def notify(info):
 
     :param info: dictionary with profiling information
     """
-    __notifier(info)
+    __notifier.notify(info)
+
+
+def notify_trace(trace_id):
+    __notifier.notify_trace(trace_id)
 
 
 def get():
     """Returns notifier callable."""
-    return __notifier
+    return __notifier.notify
 
 
 def set(notifier):
@@ -63,5 +70,5 @@ def create(connection_string, *args, **kwargs):
     if connection_string not in __driver_cache:
         __driver_cache[connection_string] = base.get_driver(connection_string,
                                                             *args,
-                                                            **kwargs).notify
+                                                            **kwargs)
     return __driver_cache[connection_string]

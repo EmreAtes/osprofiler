@@ -704,6 +704,9 @@ class _Profiler(object):
         self._notify(name, info)
         self._trace_stack.pop()
 
+    def notify_trace(self):
+        notifier.notify_trace(self.get_base_id())
+
     def _notify(self, name, info):
         if not self.get_base_id():
             return

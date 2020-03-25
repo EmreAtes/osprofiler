@@ -79,6 +79,9 @@ class Driver(object):
         else:
             self.filter_error_trace = False
 
+    def notify_trace(self, trace_id):
+        pass
+
     def notify(self, info, **kwargs):
         """This method will be called on each notifier.notify() call.
 
