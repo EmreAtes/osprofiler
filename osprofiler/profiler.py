@@ -677,6 +677,8 @@ class _Profiler(object):
             return
         info = info or {}
         info["host"] = self._host
+        if "tracepoint_id" not in info:
+            info["tracepoint_id"] = ""
         try:
             name = self._name.pop()
         except IndexError:
