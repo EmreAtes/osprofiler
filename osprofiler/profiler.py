@@ -677,8 +677,6 @@ class _Profiler(object):
             return
         info = info or {}
         info["host"] = self._host
-        if "tracepoint_id" not in info:
-            info["tracepoint_id"] = ""
         try:
             name = self._name.pop()
         except IndexError:
@@ -723,10 +721,10 @@ class _Profiler(object):
             self.get_parent_id(),
             "timestamp":
             datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "tracepoint_id":
+            info.get("tracepoint_id", "") if info else "",
         }
         if info:
-            if 'tracepoint_id' in info:
-                payload['tracepoint_id'] = info['tracepoint_id']
             payload["info"] = info
 
         notifier.notify(payload)
