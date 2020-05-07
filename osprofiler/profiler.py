@@ -159,7 +159,8 @@ def stop(info=None):
         profiler.stop(info=info)
 
 
-def annotate(name, get_parent_frame=False, info=None, immortal=False):
+def annotate(name, get_parent_frame=False, info=None, immortal=False,
+             from_oslo_log=False):
     """Annotate a variable to the traces.
 
     immortal parameter removes capability to disable.
@@ -169,10 +170,15 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False):
     >>                   info={})
     >> #code
     """
+    profiler = get()
+    if not profiler:
+        return
     if not info:
         info = {}
     curframe = inspect.currentframe()
-    if get_parent_frame:
+    if from_oslo_log:
+        parframe = inspect.getouterframes(curframe)[4]
+    elif get_parent_frame:
         parframe = inspect.getouterframes(curframe)[2]
     else:
         parframe = inspect.getouterframes(curframe)[1]
@@ -199,9 +205,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False):
                 enabled = True
     if not enabled:
         return
-    profiler = get()
-    if profiler:
-        profiler.annotate(name, info=info)
+    profiler.annotate(name, info=info)
 
 
 def disable_tracing(f):
