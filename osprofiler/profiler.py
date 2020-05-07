@@ -171,9 +171,6 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
     >>                   info={})
     >> #code
     """
-    profiler = get()
-    if not profiler:
-        return
     if not info:
         info = {}
     curframe = inspect.currentframe()
@@ -193,6 +190,12 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
     if CREATE_MANIFEST and not os.path.isfile(manifest_file):
         with open(manifest_file, 'w') as mf:
             mf.write('1')
+
+    # Need to create manifest file even if we're not enabled
+    profiler = get()
+    if not profiler:
+        return
+
     if immortal:
         enabled = True
     else:
