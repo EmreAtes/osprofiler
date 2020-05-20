@@ -47,7 +47,8 @@ REQUEST_TYPES = set([
     'ServerSecurityGroupAdd', 'ServerSecurityGroupRemove', 'ServerSet',
     'ServerShelve', 'ServerShow', 'ServerSsh', 'ServerStart', 'ServerStop',
     'ServerSuspend', 'ServerUnlock', 'ServerUnpause', 'ServerUnrescue',
-    'ServerUnset', 'ServerUnshelve', 'ServerVolumeAdd', 'ServerVolumeRemove'
+    'ServerUnset', 'ServerUnshelve', 'ServerVolumeAdd', 'ServerVolumeRemove',
+    'UsageList', 'UsageGet',
 ])
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
