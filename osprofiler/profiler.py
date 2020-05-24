@@ -76,10 +76,10 @@ def _check_enabled(manifest_file):
     if os.path.exists(manifest_file):
         with open(manifest_file, 'r') as mf:
             try:
-                enabled = bool(int(mf.read()))
+                return bool(int(mf.read()))
             except ValueError:
                 # Probably a race condition for tracepoint creation/deletion
-                enabled = True
+                return True
     else:
         return False
 
