@@ -36,7 +36,7 @@ from osprofiler import notifier
 import osprofiler.opts
 
 SKELETON_ONLY = False
-CREATE_MANIFEST = !os.path.exists("/opt/stack/DONT_CREATE_MANIFEST")
+CREATE_MANIFEST = not os.path.exists("/opt/stack/DONT_CREATE_MANIFEST")
 TRACE_NEWTHREAD = False
 REQUEST_TYPES = set([
     'FixedIPAdd', 'FixedIPRemove', 'FloatingIPAdd', 'FloatingIPRemove',
