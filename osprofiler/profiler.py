@@ -36,7 +36,7 @@ from osprofiler import notifier
 import osprofiler.opts
 
 SKELETON_ONLY = False
-CREATE_MANIFEST = True
+CREATE_MANIFEST = !os.path.exists("/opt/stack/DONT_CREATE_MANIFEST")
 TRACE_NEWTHREAD = False
 REQUEST_TYPES = set([
     'FixedIPAdd', 'FixedIPRemove', 'FloatingIPAdd', 'FloatingIPRemove',
@@ -68,6 +68,20 @@ def _ensure_no_multiple_traced(traceable_attrs):
                              " previously traced attribute '%s' since"
                              " it has been traced %s times previously" %
                              (attr_name, traced_times))
+
+
+def _check_enabled(manifest_file):
+    if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
+        manifest_file = manifest_file + ":" + _request_type()
+    if os.path.exists(manifest_file):
+        with open(manifest_file, 'r') as mf:
+            try:
+                enabled = bool(int(mf.read()))
+            except ValueError:
+                # Probably a race condition for tracepoint creation/deletion
+                enabled = True
+    else:
+        return False
 
 
 def set_request_type(request_type):
@@ -200,14 +214,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
     if immortal:
         enabled = True
     else:
-        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
-            manifest_file = manifest_file + ":" + _request_type()
-        with open(manifest_file, 'r') as mf:
-            try:
-                enabled = bool(int(mf.read()))
-            except ValueError:
-                # Probably a race condition for tracepoint creation/deletion
-                enabled = True
+        enabled = _check_enabled(manifest_file)
     if not enabled:
         return
     profiler.annotate(name, info=info)
@@ -306,17 +313,7 @@ def trace(name,
             if immortal:
                 enabled = True
             else:
-                manifest_file_ = manifest_file
-                if _request_type():
-                    newfile = manifest_file_ + ":" + _request_type()
-                    if os.path.exists(newfile):
-                        manifest_file_ = newfile
-                with open(manifest_file_, 'r') as mf:
-                    try:
-                        enabled = bool(int(mf.read()))
-                    except ValueError:
-                        # Probably a race condition for tracepoint creation/deletion
-                        enabled = True
+                enabled = _check_enabled(manifest_file)
             if not enabled:
                 return f(*args, **kwargs)
             info_ = info
@@ -559,11 +556,7 @@ class Trace(object):
                 mf.write('1')
 
     def __enter__(self):
-        manifest_file = self.manifest_file
-        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
-            manifest_file = manifest_file + ":" + _request_type()
-        with open(manifest_file, 'r') as mf:
-            self.enabled = bool(int(mf.read()))
+        self.enabled = _check_enabled(self.manifest_file)
         if not self.enabled:
             return
         start(self._name, info=self._info)
