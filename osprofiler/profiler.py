@@ -22,6 +22,7 @@ import os
 import random
 import six
 import socket
+import time
 try:
     import thread
 except:
@@ -38,6 +39,7 @@ import osprofiler.opts
 SKELETON_ONLY = False
 CREATE_MANIFEST = not os.path.exists("/opt/stack/DONT_CREATE_MANIFEST")
 TRACE_NEWTHREAD = False
+PROBLEM_TRACEPOINT = "nonexistant trace point id"
 REQUEST_TYPES = set([
     'FixedIPAdd', 'FixedIPRemove', 'FloatingIPAdd', 'FloatingIPRemove',
     'NetworkAdd', 'NetworkRemove', 'PortAdd', 'PortRemove', 'ServerCreate',
@@ -711,6 +713,8 @@ class _Profiler(object):
     def _notify(self, name, info):
         if not self.get_base_id():
             return
+        if not CREATE_MANIFEST and info.get("tracepoint_id", "") == PROBLEM_TRACEPOINT:
+            time.sleep(random.randint(0, 20))
         payload = {
             "name":
             name,
