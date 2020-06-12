@@ -16,11 +16,13 @@
 import collections
 import datetime
 import functools
+import getpass
 import inspect
 import os
 import random
 import six
 import socket
+import time
 try:
     import thread
 except:
@@ -35,8 +37,9 @@ from osprofiler import notifier
 import osprofiler.opts
 
 SKELETON_ONLY = False
-CREATE_MANIFEST = True
+CREATE_MANIFEST = not os.path.exists("/opt/stack/DONT_CREATE_MANIFEST")
 TRACE_NEWTHREAD = False
+PROBLEM_TRACEPOINT = "nonexistant trace point id"
 REQUEST_TYPES = set([
     'FixedIPAdd', 'FixedIPRemove', 'FloatingIPAdd', 'FloatingIPRemove',
     'NetworkAdd', 'NetworkRemove', 'PortAdd', 'PortRemove', 'ServerCreate',
@@ -46,7 +49,8 @@ REQUEST_TYPES = set([
     'ServerSecurityGroupAdd', 'ServerSecurityGroupRemove', 'ServerSet',
     'ServerShelve', 'ServerShow', 'ServerSsh', 'ServerStart', 'ServerStop',
     'ServerSuspend', 'ServerUnlock', 'ServerUnpause', 'ServerUnrescue',
-    'ServerUnset', 'ServerUnshelve', 'ServerVolumeAdd', 'ServerVolumeRemove'
+    'ServerUnset', 'ServerUnshelve', 'ServerVolumeAdd', 'ServerVolumeRemove',
+    'UsageList', 'UsageGet',
 ])
 
 # NOTE(boris-42): Thread safe storage for profiler instances.
@@ -66,6 +70,20 @@ def _ensure_no_multiple_traced(traceable_attrs):
                              " previously traced attribute '%s' since"
                              " it has been traced %s times previously" %
                              (attr_name, traced_times))
+
+
+def _check_enabled(manifest_file):
+    if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
+        manifest_file = manifest_file + ":" + _request_type()
+    if os.path.exists(manifest_file):
+        with open(manifest_file, 'r') as mf:
+            try:
+                return bool(int(mf.read()))
+            except ValueError:
+                # Probably a race condition for tracepoint creation/deletion
+                return True
+    else:
+        return False
 
 
 def set_request_type(request_type):
@@ -170,9 +188,6 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
     >>                   info={})
     >> #code
     """
-    profiler = get()
-    if not profiler:
-        return
     if not info:
         info = {}
     curframe = inspect.currentframe()
@@ -182,7 +197,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
         parframe = inspect.getouterframes(curframe)[2]
     else:
         parframe = inspect.getouterframes(curframe)[1]
-    info['tracepoint_id'] = '%s:%d:%s:%s' % (*parframe[1:4], name)
+    info['tracepoint_id'] = '%s%s:%d:%s:%s' % (getpass.getuser(), *parframe[1:4], name)
     manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
     try:
         os.makedirs(os.path.dirname(manifest_file))
@@ -192,17 +207,16 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
     if CREATE_MANIFEST and not os.path.isfile(manifest_file):
         with open(manifest_file, 'w') as mf:
             mf.write('1')
+
+    # Need to create manifest file even if we're not enabled
+    profiler = get()
+    if not profiler:
+        return
+
     if immortal:
         enabled = True
     else:
-        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
-            manifest_file = manifest_file + ":" + _request_type()
-        with open(manifest_file, 'r') as mf:
-            try:
-                enabled = bool(int(mf.read()))
-            except ValueError:
-                # Probably a race condition for tracepoint creation/deletion
-                enabled = True
+        enabled = _check_enabled(manifest_file)
     if not enabled:
         return
     profiler.annotate(name, info=info)
@@ -216,8 +230,8 @@ def disable_tracing(f):
 
 def trace(name,
           info=None,
-          hide_args=False,
-          hide_result=False,
+          hide_args=True,
+          hide_result=True,
           allow_multiple_trace=True,
           immortal=False):
     """Trace decorator for functions.
@@ -250,7 +264,8 @@ def trace(name,
 
     def decorator(f):
         if inspect.isbuiltin(f):
-            info['tracepoint_id'] = 'builtin:%s' % (
+            info['tracepoint_id'] = '%s/builtin:%s' % (
+                getpass.getuser(),
                 reflection.get_callable_name(f))
         else:
             source_file = inspect.getsourcefile(f)
@@ -258,8 +273,9 @@ def trace(name,
                 source_lines = inspect.getsourcelines(f)[1]
             except IOError:
                 source_lines = -1
-            info['tracepoint_id'] = '%s:%d:%s' % (
-                source_file, source_lines, reflection.get_callable_name(f))
+            info['tracepoint_id'] = '%s%s:%d:%s' % (
+                getpass.getuser(), source_file, source_lines,
+                reflection.get_callable_name(f))
         manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
         try:
             os.makedirs(os.path.dirname(manifest_file))
@@ -299,17 +315,7 @@ def trace(name,
             if immortal:
                 enabled = True
             else:
-                manifest_file_ = manifest_file
-                if _request_type():
-                    newfile = manifest_file_ + ":" + _request_type()
-                    if os.path.exists(newfile):
-                        manifest_file_ = newfile
-                with open(manifest_file_, 'r') as mf:
-                    try:
-                        enabled = bool(int(mf.read()))
-                    except ValueError:
-                        # Probably a race condition for tracepoint creation/deletion
-                        enabled = True
+                enabled = _check_enabled(manifest_file)
             if not enabled:
                 return f(*args, **kwargs)
             info_ = info
@@ -349,8 +355,8 @@ def trace(name,
 
 def trace_cls(name,
               info=None,
-              hide_args=False,
-              hide_result=False,
+              hide_args=True,
+              hide_result=True,
               trace_private=True,
               allow_multiple_trace=True,
               trace_class_methods=True,
@@ -537,8 +543,8 @@ class Trace(object):
         if 'tracepoint_id' not in info:
             curframe = inspect.currentframe()
             parframe = inspect.getouterframes(curframe, 2)[1][0]
-            info['tracepoint_id'] = '%s:%d:%s' % inspect.getframeinfo(
-                parframe)[:3]
+            info['tracepoint_id'] = '%s%s:%d:%s' % (
+                getpass.getuser(), *inspect.getframeinfo(parframe)[:3])
         self._name = name
         self._info = info
         self.manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
@@ -552,11 +558,7 @@ class Trace(object):
                 mf.write('1')
 
     def __enter__(self):
-        manifest_file = self.manifest_file
-        if _request_type() and os.path.exists(manifest_file + ":" + _request_type()):
-            manifest_file = manifest_file + ":" + _request_type()
-        with open(manifest_file, 'r') as mf:
-            self.enabled = bool(int(mf.read()))
+        self.enabled = _check_enabled(self.manifest_file)
         if not self.enabled:
             return
         start(self._name, info=self._info)
@@ -705,9 +707,14 @@ class _Profiler(object):
         self._notify(name, info)
         self._trace_stack.pop()
 
+    def notify_trace(self):
+        notifier.notify_trace(self.get_base_id())
+
     def _notify(self, name, info):
         if not self.get_base_id():
             return
+        if not CREATE_MANIFEST and info.get("tracepoint_id", "") == PROBLEM_TRACEPOINT:
+            time.sleep(random.randint(0, 20))
         payload = {
             "name":
             name,
@@ -719,10 +726,10 @@ class _Profiler(object):
             self.get_parent_id(),
             "timestamp":
             datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "tracepoint_id":
+            info.get("tracepoint_id", "") if info else "",
         }
         if info:
-            if 'tracepoint_id' in info:
-                payload['tracepoint_id'] = info['tracepoint_id']
             payload["info"] = info
 
         notifier.notify(payload)

@@ -48,11 +48,15 @@ class Redis(base.Driver):
         # redis://[:password]@host[:port][/db]
         self.db = StrictRedis.from_url(self.connection_str)
         self.namespace = "osprofiler:"
+        self.trace_namespace = "osprofiler_traces"
         self.namespace_error = "osprofiler_error:"
 
     @classmethod
     def get_name(cls):
         return "redis"
+
+    def notify_trace(self, trace_id):
+        self.db.rpush(self.trace_namespace, trace_id)
 
     def notify(self, info):
         """Send notifications to Redis.
@@ -73,9 +77,8 @@ class Redis(base.Driver):
         data = info.copy()
         data["project"] = self.project
         data["service"] = self.service
-        key = self.namespace + data["base_id"] + "_" + data["trace_id"] + "_" + \
-            data["timestamp"]
-        self.db.set(key, jsonutils.dumps(data))
+        key = self.namespace + data["base_id"]
+        self.db.append(key, jsonutils.dumps(data))
 
         if (self.filter_error_trace
                 and data.get("info", {}).get("etype") is not None):
@@ -88,7 +91,7 @@ class Redis(base.Driver):
             "base_id": data["base_id"],
             "timestamp": data["timestamp"]
         })
-        self.db.set(key, value)
+        self.db.append(key, value)
 
     def list_traces(self, fields=None):
         """Query all traces from the storage.
@@ -104,7 +107,7 @@ class Redis(base.Driver):
         # To query all traces we first need to get all keys, then
         # get all events, sort them and pick up only the first one
         ids = self.db.scan_iter(match=self.namespace + "*")
-        traces = [jsonutils.loads(self.db.get(i)) for i in ids]
+        traces = [jsonutils.loads(self.db.get(i).decode().split("}{")[0] + "}") for i in ids]
         traces.sort(key=lambda x: x["timestamp"])
         seen_ids = set()
         result = []
@@ -118,7 +121,7 @@ class Redis(base.Driver):
     def list_error_traces(self):
         """Returns all traces that have error/exception."""
         ids = self.db.scan_iter(match=self.namespace_error + "*")
-        traces = [jsonutils.loads(self.db.get(i)) for i in ids]
+        traces = [jsonutils.loads(self.db.get(i).decode().split("}{")[0] + "}") for i in ids]
         traces.sort(key=lambda x: x["timestamp"])
         seen_ids = set()
         result = []
@@ -134,9 +137,9 @@ class Redis(base.Driver):
 
         :param base_id: Base id of trace elements.
         """
-        for key in self.db.scan_iter(match=self.namespace + base_id + "*"):
-            data = self.db.get(key)
-            n = jsonutils.loads(data)
+        data = self.db.get(self.namespace + base_id).decode()
+        for entry in data[1:-1].split("}{"):
+            n = jsonutils.loads("{" + entry + "}")
             trace_id = n["trace_id"]
             parent_id = n["parent_id"]
             name = n["name"]
