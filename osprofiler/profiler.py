@@ -197,7 +197,7 @@ def annotate(name, get_parent_frame=False, info=None, immortal=False,
         parframe = inspect.getouterframes(curframe)[2]
     else:
         parframe = inspect.getouterframes(curframe)[1]
-    info['tracepoint_id'] = '%s%s:%d:%s' % (getpass.getuser(), *parframe[1:4])
+    info['tracepoint_id'] = '%s%s:%d:%s:%s' % (getpass.getuser(), *parframe[1:4], name)
     manifest_file = '/opt/stack/manifest/%s' % info['tracepoint_id']
     try:
         os.makedirs(os.path.dirname(manifest_file))
