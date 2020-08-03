@@ -63,3 +63,16 @@ ORE Installation
 - ``sudo pip install -r requirements.txt --no-deps --force-reinstall -U``
 - ``sudo pip install --no-deps --force-reinstall -U .``
 - ``sudo systemctl restart devstack@*``
+
+=====================
+CloudLab Installation
+=====================
+
+- Start with a running openstack.
+- If you have the dotfiles repo, cd to this folder and run ``pip_install`` on
+  all nodes.
+- Run ``restart_openstack_compute`` or ``restart_openstack_ctl`` on the node
+  (depending on which node you're on).
+- If you don't have the dotfiles repo, run ``sudo pip install --no-deps
+  --force-reinstall -U .`` on all nodes.
+- Restart the relevant openstack services on all nodes.
